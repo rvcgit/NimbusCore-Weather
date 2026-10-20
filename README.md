@@ -98,8 +98,20 @@ To prevent a distracting black console window from staying open on your screen, 
 3. Download `WeatherCacheSkin.ini` from this repository, place it in your WeatherCache Folder [ \Rainmeter\Skns\WeatherCache\
 4. Open your **Rainmeter Manager**, click **Refresh all**, select the skin file, and hit **Load**.
 5. Hover your cursor over the main temperature readout to reveal the comprehensive, high-contrast 2-day forecast popup
-6. window!
-7. on hovering above the weather icon you will get a pop up window for 2 days forecast 
-### For the *nix users, simplt clone the weather_fetcher_X_platform.py; make it executable with chmod a+x; place it in your $PATH [ $HOME/.bin/ as the file is configured. 
+   window!
 
-Then create a shell script to execute this python file using command "python ~/.bin/weather_fetcher_X_platform.py" with a "while ; do loop for say 1200 seconds so every 20 min this script will fetch data and dump to /tmp. [ weather_icon_cache ; weather_temp_cache ; weather_moon_phase ; weather_api_cache.json ; windspeed ] use this to pipe data to dzen panel OR conky or Waybar or polybar etc. dont forget to have a look at the preview
+   
+##### For the *nix users, simply clone the weather_fetcher_X_platform.py; make it executable with chmod a+x; place it in your $PATH 
+[ $HOME/.bin/ as the file is configured in my setup ]
+
+Then create a shell script to execute this python file using command "python ~/.bin/weather_fetcher_X_platform.py" with a "while ; do loop for say 1200 seconds so every 20 min this script will fetch data and dump to /tmp. [ weather_icon_cache ; weather_temp_cache ; weather_moon_phase ; weather_api_cache.json ; windspeed ] use this to pipe data to dzen panel OR conky or Waybar or polybar etc. dont forget to have a look at the preview provided
+
+example while loop script to run on startup:
+open your text editor and create a bash script named weather_refresh and copy the contents as below: [ for 20 min loop ]
+~~~text
+#!/usr/bin/env bash
+while : ; do python3 $HOME/.bin/weather_fetcher_X_platform.py; sleep 1200 ; done
+~~~
+save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the terminal. add this script at your autostart.
+
+[PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/preview.png)
