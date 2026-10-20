@@ -83,36 +83,22 @@ The engine loops dynamically every 15 minutes to pull fresh data from the Open-M
 ### 犯 Windows (Task Scheduler Setup)
 To prevent a distracting black console window from staying open on your screen, automate it quietly via Windows Task Scheduler:
 
-1. Create a file named `FolderManager.bat` inside `C:\apps\`.
-2. Paste the following automation script inside it:
-   ```cmd
-   @echo off
-   SET "TARGET_FOLDER=%LOCALAPPDATA%\Temp\WeatherCache"
-   SET "PROGRAM_TO_RUN=python C:\apps\weather.py"
-
-   :loop
-   taskkill /f /im "python.exe" >nul 2>&1
-   timeout /t 2 /nobreak >nul
-   dir /b /a "%TARGET_FOLDER%" 2>nul | findstr "." >nul
-   if %errorlevel%==0 (
-       del /f /q /s "%TARGET_FOLDER%\*" >nul 2>&1
-   )
-   start /wait "" %PROGRAM_TO_RUN%
-   timeout /t 900 /nobreak >nul
-   goto loop
-   ```
-3. Open **Task Scheduler** -> Click **Create Task...** (In the right-hand panel).
+1. Download file named `weather_fetcher.bat` inside `C:\apps\`.
+2. Open **Task Scheduler** -> Click **Create Task...** (In the right-hand panel).
 4. **General:** Name it `WeatherEngineAutomator`, check **Run with highest privileges**, and select **Run whether user is logged on or not** (this completely hides the command prompt window).
 5. **Triggers:** Add a new trigger set to **At log on**.
-6. **Actions:** Set to **Start a program**, browse to your `FolderManager.bat`, and fill in the **Start in** field with its parent folder path (`C:\apps`).
+6. **Actions:** Set to **Start a program**, browse to your `weather_fetcher.bat`, and fill in the **Start in** field with its parent folder path (`C:\apps`).
 7. Save the task and enter your Windows account password when prompted.
 
----
 
 ##  Step 3: Rainmeter Desktop Integration (Windows)
 
 1. Make sure you have the [JetBrainsMono Nerd Font](https://github.com) installed system-wide on your Windows machine.
 2. Create a folder named `WeatherCacheSkin` inside your Rainmeter Skins path (`Documents\Rainmeter\Skins\`).
-3. Create a text file inside named `WeatherCacheSkin.ini` and copy the provided `.ini` source code from this repository.
+3. Download `WeatherCacheSkin.ini` from this repository, place it in your WeatherCache Folder [ \Rainmeter\Skns\WeatherCache\
 4. Open your **Rainmeter Manager**, click **Refresh all**, select the skin file, and hit **Load**.
 5. Hover your cursor over the main temperature readout to reveal the comprehensive, high-contrast 2-day forecast popup window!
+
+### For the *nix users, simplt clone the weather_fetcher_X_platform.py; make it executable with chmod a+x; place it in your $PATH [ $HOME/.bin/ as the file is configured. 
+
+Then create a shell script to execute this python file using command "python ~/.bin/weather_fetcher_X_platform.py" with a "while ; do loop for say 1200 seconds so every 20 min this script will fetch data and dump to /tmp. [ weather_icon_cache ; weather_temp_cache ; weather_moon_phase ; weather_api_cache.json ; windspeed ] use this to pipe data to dzen panel OR conky or Waybar or polybar etc. dont forget to have a look at the preview
