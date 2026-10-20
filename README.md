@@ -97,8 +97,9 @@ To prevent a distracting black console window from staying open on your screen, 
 2. Create a folder named `WeatherCacheSkin` inside your Rainmeter Skins path (`Documents\Rainmeter\Skins\`).
 3. Download `WeatherCacheSkin.ini` from this repository, place it in your WeatherCache Folder [ \Rainmeter\Skns\WeatherCache\
 4. Open your **Rainmeter Manager**, click **Refresh all**, select the skin file, and hit **Load**.
-5. Hover your cursor over the main temperature readout to reveal the comprehensive, high-contrast 2-day forecast popup window!
-
+5. Hover your cursor over the main temperature readout to reveal the comprehensive, high-contrast 2-day forecast popup
+6. window!
+7. on hovering above the weather icon you will get a pop up window for 2 days forecast 
 ### For the *nix users, simplt clone the weather_fetcher_X_platform.py; make it executable with chmod a+x; place it in your $PATH [ $HOME/.bin/ as the file is configured. 
 
 Then create a shell script to execute this python file using command "python ~/.bin/weather_fetcher_X_platform.py" with a "while ; do loop for say 1200 seconds so every 20 min this script will fetch data and dump to /tmp. [ weather_icon_cache ; weather_temp_cache ; weather_moon_phase ; weather_api_cache.json ; windspeed ] use this to pipe data to dzen panel OR conky or Waybar or polybar etc. dont forget to have a look at the preview
