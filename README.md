@@ -89,6 +89,7 @@ To prevent a distracting black console window from staying open on your screen, 
 5. **Triggers:** Add a new trigger set to **At log on**.
 6. **Actions:** Set to **Start a program**, browse to your `weather_fetcher.bat`, and fill in the **Start in** field with its parent folder path (`C:\apps`).
 7. Save the task and enter your Windows account password when prompted.
+8. ALTERNATIVE TO ALL ABOVE TASK SCHEDULER EXERCISE, USE run_silently.vbs and place it in windows startup folder
 
 
 ##  Step 3: Rainmeter Desktop Integration (Windows)
