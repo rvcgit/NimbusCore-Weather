@@ -32,7 +32,7 @@ Documents\Rainmeter\Skins\
 ```
 
 ###  Linux /  BSD Configuration
-For *nix power users, the Python script can be dropped anywhere in your local binary path, feeding your favorite bar component via standard system temporary directories:
+For *nix power users, the Python script can be dropped anywhere in your local binary path, feeding your favorite bar component via standard system temporary directories: EDIT THE weather_fetcher_X_platform.py FIRST, with your LAT/LON Cordinates in the top config section.
 
 ```text
 ~/.local/bin/ or /usr/local/bin/
