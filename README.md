@@ -1,2 +1,118 @@
 # NimbusCore-Weather
  Ultra-Lightweight Cross-Platform Weather &amp; Lunar Engine
+# Ultra-Lightweight Cross-Platform Weather & Lunar Engine ️
+
+A high-performance, resource-efficient weather dashboard core designed for minimalist desktop panels (like **Rainmeter** on Windows or **Waybar/dzen** on Linux/BSD). 
+
+Unlike traditional desktop widgets that cause micro-stutters by constantly processing calculations in the UI layer, this project **decouples the engine from the interface**. For 14 minutes and 59 seconds out of every 15 minutes, the background loop uses **exactly 0.00% CPU and 0 MB of RAM**, keeping your system light, efficient, and gaming-responsive.
+
+## ✨ Features
+* **Zero UI Overhead:** Separates data parsing from visual rendering.
+* **Smart Caching:** Saves raw JSON payloads and Moon phases natively to the system's temporary directory.
+* **Beautiful Typography:** Native support for `JetBrainsMono NF` (Nerd Font) weather and directional wind compass glyphs.
+* **Rich Hover Forecast:** Pipes a deep 2-day maximum/minimum forecast directly to your cursor hover loop.
+* **Cross-Platform Architecture:** Dynamically switches temporary directory paths across Windows, Linux, macOS, and BSD systems.
+
+---
+
+## ️ Project Directory Layout
+
+### 犯 Windows Configuration
+On Windows, the backend scripts reside in a dedicated apps folder, while the layout file sits in your user documentation directory:
+
+```text
+C:\
+└── apps\
+    ├── weather_fetcher.bat   # Silent background scheduler loop
+    └── weather_fetcher_X_platform.py          # Core Python weather data parser
+    
+Documents\Rainmeter\Skins\
+└── WeatherCacheSkin\
+    └── WeatherCacheSkin.ini # The frosted cloud desktop widget
+```
+
+###  Linux /  BSD Configuration
+For *nix power users, the Python script can be dropped anywhere in your local binary path, feeding your favorite bar component via standard system temporary directories:
+
+```text
+~/.local/bin/ or /usr/local/bin/
+└── weather.py             # Executed via cron or systemd/run-it services
+
+/tmp/WeatherCache/         # Dynamic cross-platform scratchpad memory
+├── weather_api_cache.json # Raw metrics JSON
+└── weather_moon_phase     # Text file containing current lunar phase text string
+```
+
+---
+
+## ️ Step 1: Install Dependencies
+
+Before running the engine, you must ensure Python 3 and the required network library are installed on your operating system.
+
+### 犯 Windows Setup
+1. Download and install [Python 3](https://python.org) (Make sure to check the box that says **"Add Python to PATH"** during installation).
+2. Open your Command Prompt (`cmd`) or PowerShell and install the required library:
+   ```cmd
+   pip install requests
+   ```
+
+###  Linux /  BSD Setup
+Install Python 3 and pip via your system package manager, then fetch the network package:
+```bash
+# Ubuntu/Debian
+sudo apt update && sudo apt install python3 python3-pip
+pip3 install requests
+
+# Fedora/RHEL
+sudo dnf install python3 python3-pip
+pip3 install requests
+
+# Arch Linux
+sudo pacman -S python-requests
+
+# FreeBSD / OpenBSD
+sudo pkg install python3 py39-requests
+```
+
+---
+
+##  Step 2: Automation Setup (Running in the Background)
+
+The engine loops dynamically every 15 minutes to pull fresh data from the Open-Meteo API.
+
+### 犯 Windows (Task Scheduler Setup)
+To prevent a distracting black console window from staying open on your screen, automate it quietly via Windows Task Scheduler:
+
+1. Create a file named `FolderManager.bat` inside `C:\apps\`.
+2. Paste the following automation script inside it:
+   ```cmd
+   @echo off
+   SET "TARGET_FOLDER=%LOCALAPPDATA%\Temp\WeatherCache"
+   SET "PROGRAM_TO_RUN=python C:\apps\weather.py"
+
+   :loop
+   taskkill /f /im "python.exe" >nul 2>&1
+   timeout /t 2 /nobreak >nul
+   dir /b /a "%TARGET_FOLDER%" 2>nul | findstr "." >nul
+   if %errorlevel%==0 (
+       del /f /q /s "%TARGET_FOLDER%\*" >nul 2>&1
+   )
+   start /wait "" %PROGRAM_TO_RUN%
+   timeout /t 900 /nobreak >nul
+   goto loop
+   ```
+3. Open **Task Scheduler** -> Click **Create Task...** (In the right-hand panel).
+4. **General:** Name it `WeatherEngineAutomator`, check **Run with highest privileges**, and select **Run whether user is logged on or not** (this completely hides the command prompt window).
+5. **Triggers:** Add a new trigger set to **At log on**.
+6. **Actions:** Set to **Start a program**, browse to your `FolderManager.bat`, and fill in the **Start in** field with its parent folder path (`C:\apps`).
+7. Save the task and enter your Windows account password when prompted.
+
+---
+
+##  Step 3: Rainmeter Desktop Integration (Windows)
+
+1. Make sure you have the [JetBrainsMono Nerd Font](https://github.com) installed system-wide on your Windows machine.
+2. Create a folder named `WeatherCacheSkin` inside your Rainmeter Skins path (`Documents\Rainmeter\Skins\`).
+3. Create a text file inside named `WeatherCacheSkin.ini` and copy the provided `.ini` source code from this repository.
+4. Open your **Rainmeter Manager**, click **Refresh all**, select the skin file, and hit **Load**.
+5. Hover your cursor over the main temperature readout to reveal the comprehensive, high-contrast 2-day forecast popup window!
