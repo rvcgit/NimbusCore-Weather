@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "/c C:\apps\open-meteo-weather.bat", 0, False
