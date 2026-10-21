@@ -1,37 +1,30 @@
-@echo off
-:: --- CONFIGURATION ---
-SET "APPS_DIR=C:\apps"
-SET "TARGET_FOLDER=%LOCALAPPDATA%\Temp\WeatherCache"
-SET "SCRIPT_NAME=weather_fetcher_X_platform.py"
-:: ---------------------
-
-:: 1. Force the script to execute out of the correct directory
-cd /d "%APPS_DIR%" || (
-    echo [ERROR] Could not find the apps folder at %APPS_DIR%
-    pause
-    exit /b
-)
+Bat@echo off
+REM ============================================
+REM WeatherCache refresh loop - every 15 minutes
+REM ============================================
 
 :loop
-echo [%date% %time%] Starting automated cleanup and fetch cycle...
+echo [%date% %time%] Clearing WeatherCache...
 
-:: 2. Clear out the Open-Meteo cache files safely without locking
-if exist "%TARGET_FOLDER%" (
-    del /f /q /s "%TARGET_FOLDER%\*" >nul 2>&1
-    for /d %%p in ("%TARGET_FOLDER%\*") do rmdir /s /q "%%p" >nul 2>&1
+REM Delete all files in WeatherCache folder
+REM /Q = quiet mode, /S = include subfolders, /F = force delete
+if exist "%LOCALAPPDATA%\Temp\WeatherCache\" (
+    del /Q /F /S "%LOCALAPPDATA%\Temp\WeatherCache\*"
 )
 
-:: 3. Execute the Python weather script and wait for it to finish gracefully
-echo [%date% %time%] Running %SCRIPT_NAME%...
-python "%SCRIPT_NAME%"
+REM Optional: remove empty subfolders
+for /d %%D in ("%LOCALAPPDATA%\Temp\WeatherCache\*") do rd /S /Q "%%D"
 
-:: 4. Check if Python threw an internal execution error
-if %errorlevel% neq 0 (
-    echo [%date% %time%] WARNING: Python script exited with error code %errorlevel%
-)
+echo [%date% %time%] Running Python application...
 
-:: 5. Sleep for exactly 15 minutes (900 seconds) before repeating
-echo [%date% %time%] Cycle complete. Sleeping for 15 minutes...
+REM Run your Python script
+::REM Ensure Python is installed and in PATH
+python "C:\apps\weather_fetcher_X_platform.py"
+
+echo [%date% %time%] Cycle complete. Waiting 15 minutes...
+
+REM Wait 900 seconds (15 minutes)
 timeout /t 900 /nobreak >nul
 
 goto loop
+
