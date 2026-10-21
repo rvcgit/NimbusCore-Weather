@@ -85,7 +85,7 @@ To prevent a distracting black console window from staying open on your screen, 
 
 1. Download file named `weather_fetcher.bat` inside `C:\apps\`.
 2. Open **Task Scheduler** -> Click **Create Task...** (In the right-hand panel).
-4. **General:** Name it `WeatherEngineAutomator`, check **Run with highest privileges**, and select **Run whether user is logged on or not** (this completely hides the command prompt window).
+4. **General:** Name it `WeatherEngineAutomator`, check **Run with highest privileges**, and select **Run whether user is logged on or not**, and select **Hidden** (this completely hides the command prompt window).
 5. **Triggers:** Add a new trigger set to **At log on**.
 6. **Actions:** Set to **Start a program**, browse to your `weather_fetcher.bat`, and fill in the **Start in** field with its parent folder path (`C:\apps`).
 7. Save the task and enter your Windows account password when prompted.
