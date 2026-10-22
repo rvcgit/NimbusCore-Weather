@@ -115,5 +115,5 @@ while : ; do python3 $HOME/.bin/weather_fetcher_X_platform.py; sleep 1200 ; done
 ~~~
 save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the terminal. add this script at your autostart.
 
-[PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/preview.png)
+[PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/NebulaCoreWeather.png)
 [RAINMETER PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Preview_2.PNG)
