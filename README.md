@@ -2,7 +2,7 @@
  Ultra-Lightweight Cross-Platform Weather &amp; Lunar Engine
 # Ultra-Lightweight Cross-Platform Weather & Lunar Engine ️
 
-A high-performance, resource-efficient weather dashboard core designed for minimalist desktop panels (like **Rainmeter** on Windows or **Waybar/dzen** on Linux/BSD). 
+A high-performance, resource-efficient weather dashboard core designed for minimalist desktop panels (like **Rainmeter** on Windows or **Waybar/dzen/lemonbar/polybar/conky etc** on Linux/BSD). can use the output dump from /tmp to pipe data.
 
 Unlike traditional desktop widgets that cause micro-stutters by constantly processing calculations in the UI layer, this project **decouples the engine from the interface**. For 14 minutes and 59 seconds out of every 15 minutes, the background loop uses **exactly 0.00% CPU and 0 MB of RAM**, keeping your system light, efficient, and gaming-responsive.
 
