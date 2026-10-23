@@ -1,6 +1,6 @@
 # NimbusCore-Weather
  Ultra-Lightweight Cross-Platform Weather &amp; Lunar Engine
-# Ultra-Lightweight Cross-Platform Weather & Lunar Engine ️
+# Ultra-Lightweight Cross-Platform Weather & Lunar Engine
 
 A high-performance, resource-efficient weather dashboard core designed for minimalist desktop panels (like **Rainmeter** on Windows or **Waybar/dzen/lemonbar/polybar/conky etc** on Linux/BSD). can use the output dump from /tmp to pipe data.
 
