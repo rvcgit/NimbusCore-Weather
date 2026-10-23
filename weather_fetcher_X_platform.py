@@ -12,8 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ==================== CROSS-PLATFORM CONFIGURATION ====================
-LAT = 20.385	# EDIT WITH YOUR COORDINATES [LATITUDE]
-LON = 72.911    # EDIT WITH YOUR COORDINATES [LONGITUDE]
+LAT = XX.YYYY	# EDIT WITH YOUR COORDINATES [LATITUDE]
+LON = XX.YYYY   # EDIT WITH YOUR COORDINATES [LONGITUDE]
 API_URL = "https://api.open-meteo.com/v1/forecast"
 
 # Detect Operating System and set CACHE_DIR dynamically
