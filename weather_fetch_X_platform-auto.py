@@ -113,10 +113,24 @@ def weather_icon(code, is_day):
     return ICONS["cloud"]
 
 def get_16_point_compass(degrees):
-    """Converts meteorological degrees to 16-point text direction and standard layout arrows."""
+    """Convert meteorological degrees to compass direction and matching arrow."""
     degrees = (degrees % 360 + 360) % 360
-    points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-    arrows = ["↓", "↙", "↙", "↙", "←", "↖", "↖", "↖", "↑", "↗", "↗", "↗", "→", "↘", "↘", "↘"]
+
+    points = [
+        "N", "NNE", "NE", "ENE",
+        "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW",
+        "W", "WNW", "NW", "NNW"
+    ]
+
+    # Arrows point toward the compass direction the wind comes FROM.
+    arrows = [
+        "↑", "↗", "↗", "↗",
+        "→", "↘", "↘", "↘",
+        "↓", "↙", "↙", "↙",
+        "←", "↖", "↖", "↖"
+    ]
+
     index = int((degrees + 11.25) / 22.5) % 16
     return points[index], arrows[index]
 
