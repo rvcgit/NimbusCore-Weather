@@ -24,7 +24,7 @@ On Windows, the backend scripts reside in a dedicated apps folder, while the lay
 C:\
 └── apps\
     ├── weather_fetcher.bat   # Silent background scheduler loop
-    └── weather_fetcher_X_platform.py          # Core Python weather data parser
+    └── weather_fetcher_X_platform.py  OR weather_fetch_X_platform-auto.py        # Core Python weather data parser
     
 Documents\Rainmeter\Skins\
 └── WeatherCacheSkin\
@@ -83,7 +83,7 @@ The engine loops dynamically every 15 minutes to pull fresh data from the Open-M
 ### 犯 Windows (Task Scheduler Setup)
 To prevent a distracting black console window from staying open on your screen, automate it quietly via Windows Task Scheduler:
 
-1. Download file named `weather_fetcher.bat` inside `C:\apps\`.
+1. Download file named `weather_fetcher.bat`**[ edit file to weather_fetch_X_platform-auto.py for auto LAT/LON in the bat file ]** inside `C:\apps\`.
 2. Open **Task Scheduler** -> Click **Create Task...** (In the right-hand panel).
 4. **General:** Name it `WeatherEngineAutomator`, check **Run with highest privileges**, and select **Run whether user is logged on or not**, and select **Hidden** (this completely hides the command prompt window).
 5. **Triggers:** Add a new trigger set to **At log on**.
@@ -103,16 +103,16 @@ To prevent a distracting black console window from staying open on your screen, 
    window!
 
    
-##### For the *nix users, simply clone the weather_fetcher_X_platform.py; make it executable with chmod a+x; place it in your $PATH 
+##### For the *nix users, simply clone the weather_fetcher_X_platform.py OR weather_fetch_X_platform-auto.py; make it executable with chmod a+x; place it in your $PATH 
 [ $HOME/.bin/ as the file is configured in my setup ]
 
 Then create a shell script to execute this python file using command "python3 ~/.bin/weather_fetcher_X_platform.py" with a "while ; do loop for say 1200 seconds so every 20 min this script will fetch data and dump to /tmp. [ weather_icon_cache ; weather_temp_cache ; weather_moon_phase ; weather_api_cache.json ; windspeed ] use this to pipe data to dzen panel OR conky or Waybar or polybar etc. dont forget to have a look at the preview provided
 
 example while loop script to run on startup:
-open your text editor and create a bash script named weather_refresh and copy the contents as below: [ for 20 min loop ]
+open your text editor and create a bash script named weather_refresh and copy the contents as below: [ for 15 min loop ]
 ~~~text
 #!/usr/bin/env bash
-while : ; do python3 $HOME/.bin/weather_fetcher_X_platform.py; sleep 1200 ; done
+while : ; do python3 $HOME/.bin/YOUR_WEATHER_FETCHER.py file you have cloned; sleep 900 ; done
 ~~~
 save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the terminal. add this script at your autostart.
 
