@@ -125,10 +125,10 @@ def get_16_point_compass(degrees):
 
     # Arrows point toward the compass direction the wind comes FROM.
     arrows = [
-        "↑", "↗", "↗", "↗",
-        "→", "↘", "↘", "↘",
         "↓", "↙", "↙", "↙",
-        "←", "↖", "↖", "↖"
+        "←", "↖", "↖", "↖",
+        "↑", "↗", "↗", "↗",        
+        "→", "↘", "↘", "↘"
     ]
 
     index = int((degrees + 11.25) / 22.5) % 16
@@ -294,7 +294,7 @@ def main():
     # Native Waybar JSON output payload structure
     waybar_output = {
         "text": f"{icon} {round(temperature)}°C",
-        "tooltip": f"✨ Condition: {condition_text}\n Wind Speed: {wind:.1f} m/s ({wind_text} {wind_arrow})\n🌙 Moon Phase: {m_phase}\n\n{forecast_text}", # def 💨; changed to 
+        "tooltip": f"✨ Condition: {condition_text}\n     Wind Speed: {wind:.1f} m/s ({wind_text} {wind_arrow})\n🌙 Moon Phase: {m_phase}\n\n{forecast_text}", # def 💨; changed to 
         "class": "weather",
         "percentage": int(round(temperature))
     }
@@ -324,4 +324,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
