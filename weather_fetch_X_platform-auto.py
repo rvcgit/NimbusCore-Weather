@@ -198,6 +198,43 @@ def main():
     atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
     atomic_write("weather_time_status", "day" if is_day == 1 else "night")
 
+    # Extract 2-Day forecast metrics safely using positional indexing
+    try:
+        daily_data = data.get("daily", {})
+        d1_date = daily_data.get("time", ["--"])[0]
+        d2_date = daily_data.get("time", ["--"])[1]
+        d1_max = daily_data.get("temperature_2m_max", [0.0])[0]
+        d2_max = daily_data.get("temperature_2m_max", [0.0])[1]
+        d1_min = daily_data.get("temperature_2m_min", [0.0])[0]
+        d2_min = daily_data.get("temperature_2m_min", [0.0])[1]
+        d1_code = daily_data.get("weather_code", [0])[0]
+        d2_code = daily_data.get("weather_code", [0])[1]
+        
+        d1_txt = WMO_TEXT_MAP.get(int(d1_code), "Unknown")
+        d2_txt = WMO_TEXT_MAP.get(int(d2_code), "Unknown")
+        
+        # Safe string styling separation using clean .format maps
+        # Removed span formatting entirely from the date row to guarantee error-free rendering
+        forecast_text = (
+            "📅 {} (Today)\n"
+            "✨ Condition: {}\n"
+            "🔺 Max: {}°C\n"
+            "🔻 Min: {}°C\n\n"
+            "📅 {} (Tomorrow)\n"
+            "✨ Condition: {}\n"
+            "🔺 Max: {}°C\n"
+            "🔻 Min: {}°C"
+        ).format(
+            str(d1_date), str(d1_txt), round(d1_max), round(d1_min),
+            str(d2_date), str(d2_txt), round(d2_max), round(d2_min)
+        )
+
+        atomic_write("weather_forecast_cache", forecast_text)
+    except Exception:
+        forecast_text = "Forecast Details Unavailable"
+        atomic_write("weather_forecast_cache", forecast_text)
+
+
     # Dump the JSON cache file cleanly on success to the platform's cache directory
     atomic_write("weather_api_cache.json", json.dumps(data, indent=2))    
 
