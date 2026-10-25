@@ -137,7 +137,7 @@ def main():
         atomic_write("weather_icon_cache", "")
         atomic_write("weather_temp_cache", "--°C")
         atomic_write("weather_condition_cache", "Unknown")
-        atomic_write("weather_moon_phase", m_phase)
+        atomic_write("weather_moon_phase_cache", m_phase)
         atomic_write("windspeed", "0.00 m/s")
         atomic_write("weather_time_status", "day")
         
@@ -190,7 +190,7 @@ def main():
     atomic_write("weather_icon_cache", icon)
     atomic_write("weather_temp_cache", f"{round(temperature)}°C")
     atomic_write("weather_condition_cache", condition_text)
-    atomic_write("weather_moon_phase", m_phase)
+    atomic_write("weather_moon_phase_cache", m_phase)
     atomic_write("windspeed", f"{wind:.2f} m/s")
     atomic_write("wind_direction_cache", f"{wind_text} {wind_arrow}")
     atomic_write("weather_time_status", "day" if is_day == 1 else "night")
