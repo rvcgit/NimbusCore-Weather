@@ -218,9 +218,9 @@ def main():
 
     # 4. 🌟 PRINT LIVE RESULTS STRAIGHT TO THE RUNNING TERMINAL EMULATOR
     print("\n================== CURRENT WEATHER STATE ==================")
-    print(f"Condition : {icon}  {cond_text}")
-    print(f"Temperature: {temp:.1f}°C")
-    print(f"Wind Speed : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
+    print(f"Condition  : {icon}  {cond_text}")
+    print(f"Temperature: {'🔥'}{temp:.1f}°C")
+    print(f"Wind Speed : {' '}{wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
     print(f"Time Mode  : {'☀️ DAYTIME' if is_day == 1 else '🌙 NIGHTTIME'}")
     print(f"Lunar Cycle: {m_phase}")
     print("===========================================================")
