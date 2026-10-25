@@ -15,9 +15,9 @@ from pathlib import Path
 # Optional "manual overrides" for location profiling.
 # If these coordinates are explicitly configured, the script bypasses auto-detection.
 # To use auto-detection, set both variables back to 'None'.
-MANUAL_LAT = None # IF SPECIFIC LON NEEDED, EDIT HERE WITH YOUR LATITUDE
+MANUAL_LAT = None # EDIT WITH YOUR LATITUDE
 
-MANUAL_LON = None # IF SPECIFIC LON NEEDED, EDIT HERE WITH YOUR LONGITUDE [ "-" prefix needed for W lon ]
+MANUAL_LON = None # EDIT WITH YOUR LONGITUDE
 # =====================================================================================
 
 def get_coordinates():
@@ -187,6 +187,7 @@ def main():
     compass_pt, compass_arr = get_16_point_compass(wind_deg)
     icon = weather_icon(wmo_code, is_day == 1)
     cond_text = WMO_TEXT_MAP.get(wmo_code, "Unknown")
+
     
     # 2. WRITE SYSTEM LEVEL CACHES FOR STRIP PANELS
     atomic_write("weather_icon_cache", icon)
@@ -196,6 +197,10 @@ def main():
     atomic_write("weather_moon_phase_cache", m_phase)
     atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
     atomic_write("weather_time_status", "day" if is_day == 1 else "night")
+
+    # Dump the JSON cache file cleanly on success to the platform's cache directory
+    atomic_write("weather_api_cache.json", json.dumps(data, indent=2))    
+
 
     # 3. EXPORT INDIVIDUAL CLEAN CSV PARSED DATA SHEETS FOR UNIFIED POPUPS
     try:
@@ -218,9 +223,9 @@ def main():
 
     # 4. 🌟 PRINT LIVE RESULTS STRAIGHT TO THE RUNNING TERMINAL EMULATOR
     print("\n================== CURRENT WEATHER STATE ==================")
-    print(f"Condition  : {icon}  {cond_text}")
-    print(f"Temperature: {'🔥'}{temp:.1f}°C")
-    print(f"Wind Speed : {' '}{wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
+    print(f"Condition : {icon}  {cond_text}")
+    print(f"Temperature: {temp:.1f}°C")
+    print(f"Wind Speed : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
     print(f"Time Mode  : {'☀️ DAYTIME' if is_day == 1 else '🌙 NIGHTTIME'}")
     print(f"Lunar Cycle: {m_phase}")
     print("===========================================================")
@@ -237,3 +242,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
