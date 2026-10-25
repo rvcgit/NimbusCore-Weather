@@ -12,24 +12,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ==================== CROSS-PLATFORM CONFIGURATION ====================================
-AUTO_DETECT_LOCATION = True ## using IP geolocation endpoint at ipwho.is without API key
-# ======================================================================================
-# Optional "fallback coordinates if autodetectionfails [ex if VPN used]
-# Set below to your preferred location OR leave as 'None'
-MANUAL_LAT = None	# EDIT WITH YOUR LATITUDE
-MANUAL_LON = None   # EDIT WITH YOUR LONGITUDE
+# Optional "manual overrides" for location profiling.
+# If these coordinates are explicitly configured, the script bypasses auto-detection.
+# To use auto-detection, set both variables back to 'None'.
+MANUAL_LAT = None # IF SPECIFIC LON NEEDED, EDIT HERE WITH YOUR LATITUDE
+
+MANUAL_LON = None # IF SPECIFIC LON NEEDED, EDIT HERE WITH YOUR LONGITUDE [ "-" prefix needed for W lon ]
 # =====================================================================================
 
 def get_coordinates():
-    """Detect approximate location from public IP, with manual fallback."""
-
-    if not AUTO_DETECT_LOCATION:
-        if MANUAL_LAT is None or MANUAL_LON is None:
-            raise ValueError("Manual latitude and longitude are required.")
+    """Returns coordinates using explicit manual variables first, falling back to public IP."""
+    # 1. 🌟 CORE STRATEGY: If manual coordinates are provided, prioritize them immediately
+    if MANUAL_LAT is not None and MANUAL_LON is not None:
+        print(f"Prioritizing manual override coordinates: latitude={MANUAL_LAT:.4f}, longitude={MANUAL_LON:.4f}")
         return float(MANUAL_LAT), float(MANUAL_LON)
 
+    # 2. Fallback to IP Network Geolocation scanning if manual inputs are blank
+    print("No manual override detected. Scanning public IP geolocation parameters...")
     try:
-        response = requests.get("https://ipwho.is/", timeout=5)
+        response = requests.get("https://ipwho.is", timeout=5)
         response.raise_for_status()
         location = response.json()
 
@@ -38,25 +39,14 @@ def get_coordinates():
             lon = float(location["longitude"])
 
             if -90 <= lat <= 90 and -180 <= lon <= 180:
-                print(
-                    f"Auto-detected location: "
-                    f"latitude={lat:.4f}, longitude={lon:.4f}"
-                )
+                print(f"Auto-detected location: latitude={lat:.4f}, longitude={lon:.4f}")
                 return lat, lon
 
         raise ValueError("Geolocation service returned invalid coordinates.")
 
     except Exception as exc:
-        if MANUAL_LAT is not None and MANUAL_LON is not None:
-            print(
-                f"Location detection failed ({exc}); "
-                "using manual coordinates."
-            )
-            return float(MANUAL_LAT), float(MANUAL_LON)
-
         raise RuntimeError(
-            "Could not detect location. Check your internet connection "
-            "or configure MANUAL_LAT and MANUAL_LON."
+            "Could not resolve coordinates. Configure MANUAL_LAT and MANUAL_LON variables."
         ) from exc
                      
 API_URL = "https://api.open-meteo.com/v1/forecast"
@@ -66,12 +56,9 @@ SYSTEM_OS = platform.system().lower()
 
 if "win" in SYSTEM_OS:
     CACHE_DIR = Path(os.environ.get("LOCALAPPDATA", r"C:\Users\User\AppData\Local")) / "Temp" / "WeatherCache"
-elif "bsd" in SYSTEM_OS or "linux" in SYSTEM_OS or "darwin" in SYSTEM_OS:
-    CACHE_DIR = Path("/tmp")
 else:
     CACHE_DIR = Path("/tmp")
 
-# Ensure the cache directory exists on Windows/BSD if it doesn't already
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Explicit Nerd Font Character Glyph Nodes
@@ -113,36 +100,11 @@ def weather_icon(code, is_day):
     return ICONS["cloud"]
 
 def get_16_point_compass(degrees):
-    """Convert meteorological degrees to compass direction and matching arrow."""
     degrees = (degrees % 360 + 360) % 360
-
-    points = [
-        "N", "NNE", "NE", "ENE",
-        "E", "ESE", "SE", "SSE",
-        "S", "SSW", "SW", "WSW",
-        "W", "WNW", "NW", "NNW"
-    ]
-
-    # Arrows point toward the compass direction the wind comes FROM.
-    arrows = [
-        "↓", "↙", "↙", "↙",
-        "←", "↖", "↖", "↖",
-        "↑", "↗", "↗", "↗",        
-        "→", "↘", "↘", "↘"
-    ]
-
+    points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    arrows = ["↓", "↙", "↙", "↙", "←", "↖", "↖", "↖", "↑", "↗", "↗", "↗", "→", "↘", "↘", "↘"]
     index = int((degrees + 11.25) / 22.5) % 16
     return points[index], arrows[index]
-
-def get_visible_width(text):
-    """Accurately maps the display matrix width of icons and characters."""
-    width = 0
-    for char in text:
-        if ord(char) in [0xf185, 0xf186, 0xe21d, 0xec7e, 0xe312, 0xe30d, 0xe239, 0xf2dc, 0xe322, 0xef03, 0xef04] or char in ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"]:
-            width += 1
-        else:
-            width += 1 if ord(char) < 0x2e80 else 2
-    return width
 
 def moon_phase():
     now = datetime.now(timezone.utc)
@@ -168,15 +130,25 @@ def atomic_write(filename, content):
         with os.fdopen(fd, "w", encoding="utf-8") as file: file.write(content + "\n")
         os.replace(temp_name, destination)
     finally:
-        if os.path.exists(temp_name): os.unlink(temp_name)
+        if os.path.exists(temp_name):
+            try: os.unlink(temp_name)
+            except OSError: pass
+
 def main():
-    lat, lon = get_coordinates()
+    try:
+        lat, lon = get_coordinates()
+    except Exception as e:
+        print(f"Location Error: {e}")
+        return
+
+    # Using clean lists without .join strings. 
+    # Python requests safely maps multiple parameters matching Open-Meteo's strict array expectations.
     params = {
         "latitude": lat,
         "longitude": lon,
-        "current": "temperature_2m,wind_speed_10m,wind_direction_10m,is_day,weather_code",
-        "hourly": "temperature_2m,weather_code",
-        "daily": "temperature_2m_max,temperature_2m_min,weather_code",
+        "current": ["temperature_2m", "wind_speed_10m", "wind_direction_10m", "is_day", "weather_code"],
+        "hourly": ["temperature_2m", "weather_code"],
+        "daily": ["temperature_2m_max", "temperature_2m_min", "weather_code"],
         "timezone": "auto",
         "forecast_days": 5,
         "temperature_unit": "celsius",
@@ -187,140 +159,81 @@ def main():
         response = requests.get(API_URL, params=params, timeout=20)
         response.raise_for_status()
         data = response.json()
-    except Exception:
+    except Exception as e:
+        print(f"API Fetch Failure: {e}")
         data = None
 
     m_phase = moon_phase()
 
-    # Fallback if network fails entirely
     if data is None:
+        # Offline Fallback Core Writes
         atomic_write("weather_icon_cache", "")
         atomic_write("weather_temp_cache", "--°C")
         atomic_write("weather_condition_cache", "Unknown")
-        atomic_write("weather_moon_phase", m_phase)
-        atomic_write("windspeed", "0.00 m/s")
+        atomic_write("weather_moon_phase_cache", m_phase)
+        atomic_write("weather_wind_speed_cache", "0.0 m/s")
         atomic_write("weather_time_status", "day")
-        
-        waybar_output = {
-            "text": " --°C", 
-            "tooltip": f"Offline Fallback Mode\n🌙 Lunar: {m_phase}", 
-            "class": "weather", 
-            "percentage": 0
-        }
-        import sys
-        if len(sys.argv) > 1 and sys.argv[1] == "--json-only":
-            print(json.dumps(waybar_output))
-        else:
-            fallback_report = [
-                "Temp:            --°C",
-                "Condition:      Offline Fallback Mode",
-                "Wind:           0.00 m/s (N ↓)",
-                f"Lunar Phase:    {m_phase}"
-            ]
-            fallback_len = max(get_visible_width(l) for l in fallback_report)
-            print("*" * fallback_len)
-            for l in fallback_report: print(l)
-            print("*" * fallback_len)
-            print(json.dumps(waybar_output))
+        atomic_write("weather_code_cache", "0")
         return
 
-    # Dump the JSON cache file cleanly on success to the platform's cache directory
-    atomic_write("weather_api_cache.json", json.dumps(data, indent=2))
-
+    # 1. PROCESS CURRENT DATA
     current = data.get("current", {})
-    required = ("temperature_2m", "wind_speed_10m", "wind_direction_10m", "is_day", "weather_code")
-    if any(current.get(key) is None for key in required):
-        raise ValueError("Required weather fields are missing from API response")
-
-    temperature = current.get("temperature_2m", 0.0)
-    wind = current.get("wind_speed_10m", 0.0)
-    wind_dir = current.get("wind_direction_10m", 0.0)
-    weather_code = current.get("weather_code", 0)
-    is_day = current.get("is_day", 1)
+    temp = current.get("temperature_2m", 0.0)
+    wmo_code = current.get("weather_code", 0)
+    is_day = int(current.get("is_day", 1))
+    wind_speed = current.get("wind_speed_10m", 0.0)
+    wind_deg = current.get("wind_direction_10m", 0)
     
-    icon = weather_icon(weather_code, bool(is_day))
-
-    # Safely resolve current weather condition description text
-    condition_text = WMO_TEXT_MAP.get(int(weather_code), "Unknown")
-
-    # Calculate 16-point wind properties
-    wind_text, wind_arrow = get_16_point_compass(wind_dir)
-
-    # Maintain atomic writes for dashboard text files across platforms
+    compass_pt, compass_arr = get_16_point_compass(wind_deg)
+    icon = weather_icon(wmo_code, is_day == 1)
+    cond_text = WMO_TEXT_MAP.get(wmo_code, "Unknown")
+    
+    # 2. WRITE SYSTEM LEVEL CACHES FOR STRIP PANELS
     atomic_write("weather_icon_cache", icon)
-    atomic_write("weather_temp_cache", f"{round(temperature)}°C")
-    atomic_write("weather_condition_cache", condition_text)
-    atomic_write("weather_moon_phase", m_phase)
-    atomic_write("windspeed", f"{wind:.2f} m/s")
-    atomic_write("wind_direction_cache", f"{wind_text} {wind_arrow}")
+    atomic_write("weather_temp_cache", f"{temp:.1f}°C")
+    atomic_write("weather_code_cache", str(wmo_code))
+    atomic_write("weather_condition_cache", cond_text)
+    atomic_write("weather_moon_phase_cache", m_phase)
+    atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
     atomic_write("weather_time_status", "day" if is_day == 1 else "night")
 
-    # Extract 2-Day forecast metrics safely using positional indexing
+    # 3. EXPORT INDIVIDUAL CLEAN CSV PARSED DATA SHEETS FOR UNIFIED POPUPS
     try:
-        daily_data = data.get("daily", {})
-        d1_date = daily_data.get("time", ["--"])[0]
-        d2_date = daily_data.get("time", ["--"])[1]
-        d1_max = daily_data.get("temperature_2m_max", [0.0])[0]
-        d2_max = daily_data.get("temperature_2m_max", [0.0])[1]
-        d1_min = daily_data.get("temperature_2m_min", [0.0])[0]
-        d2_min = daily_data.get("temperature_2m_min", [0.0])[1]
-        d1_code = daily_data.get("weather_code", [0])[0]
-        d2_code = daily_data.get("weather_code", [0])[1]
-        
-        d1_txt = WMO_TEXT_MAP.get(int(d1_code), "Unknown")
-        d2_txt = WMO_TEXT_MAP.get(int(d2_code), "Unknown")
-        
-        # Safe string styling separation using clean .format maps
-        # Removed span formatting entirely from the date row to guarantee error-free rendering
-        forecast_text = (
-            "📅 {} (Today)\n"
-            "✨ Condition: {}\n"
-            "🔺 Max: {}°C\n"
-            "🔻 Min: {}°C\n\n"
-            "📅 {} (Tomorrow)\n"
-            "✨ Condition: {}\n"
-            "🔺 Max: {}°C\n"
-            "🔻 Min: {}°C"
-        ).format(
-            str(d1_date), str(d1_txt), round(d1_max), round(d1_min),
-            str(d2_date), str(d2_txt), round(d2_max), round(d2_min)
-        )
+        # Build Hourly CSV
+        hourly = data.get("hourly", {})
+        with open(CACHE_DIR / "hourly_weather.csv", "w", encoding="utf-8") as f:
+            f.write("datetime,temperature_2m,weather_code\n")
+            for i in range(min(24, len(hourly.get("time", [])))):
+                t_str = hourly["time"][i].replace("T", " ")
+                f.write(f"{t_str},{hourly['temperature_2m'][i]},{hourly['weather_code'][i]}\n")
 
-        atomic_write("weather_forecast_cache", forecast_text)
-    except Exception:
-        forecast_text = "Forecast Details Unavailable"
-        atomic_write("weather_forecast_cache", forecast_text)
+        # Build Daily CSV
+        daily = data.get("daily", {})
+        with open(CACHE_DIR / "daily_weather.csv", "w", encoding="utf-8") as f:
+            f.write("date,weather_code,temperature_2m_max,temperature_2m_min\n")
+            for i in range(min(5, len(daily.get("time", [])))):
+                f.write(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}\n")
+    except Exception as csv_err:
+        print(f"Failed to generate CSV templates: {csv_err}")
 
-    # Native Waybar JSON output payload structure
+    # 4. 🌟 PRINT LIVE RESULTS STRAIGHT TO THE RUNNING TERMINAL EMULATOR
+    print("\n================== CURRENT WEATHER STATE ==================")
+    print(f"Condition : {icon}  {cond_text}")
+    print(f"Temperature: {temp:.1f}°C")
+    print(f"Wind Speed : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
+    print(f"Time Mode  : {'☀️ DAYTIME' if is_day == 1 else '🌙 NIGHTTIME'}")
+    print(f"Lunar Cycle: {m_phase}")
+    print("===========================================================")
+    
+    # 5. GENERATE & PRINT NATIVE WAYBAR FORMAT JSON STRINGS
     waybar_output = {
-        "text": f"{icon} {round(temperature)}°C",
-        "tooltip": f"✨ Condition: {condition_text}\n     Wind Speed: {wind:.1f} m/s ({wind_text} {wind_arrow})\n🌙 Moon Phase: {m_phase}\n\n{forecast_text}", # def 💨; changed to 
+        "text": f"{icon}  {temp:.1f}°C",
+        "tooltip": f"Condition: {cond_text}\nWind: {wind_speed:.1f} m/s {compass_pt}\nLunar: {m_phase}",
         "class": "weather",
-        "percentage": int(round(temperature))
+        "percentage": 0
     }
-
-    # ------------------------------------------------------------------
-    # SWITCH OUTPUT MODES DYNAMICALLY BASED ON ARGUMENTS
-    # ------------------------------------------------------------------
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--json-only":
-        # Waybar Mode: Print ONLY the pristine JSON string
-        print(json.dumps(waybar_output))
-    else:
-        # Terminal Mode: Print the visually boxed asterisks report AND the json
-        report_lines = [
-            f"Temp:           {icon} {round(temperature)}°C",
-            f"Condition:      {condition_text}",
-            f"Wind:           {wind:.2f} m/s ({wind_text} {wind_arrow})",
-            f"Lunar Phase:    {m_phase}"
-        ]
-        max_len = max(get_visible_width(line) for line in report_lines)
-        dynamic_border = "*" * max_len
-
-        print(dynamic_border)
-        for line in report_lines: print(line)
-        print(dynamic_border)
-        print(json.dumps(waybar_output))
+    print(f"\nWaybar Output Payload:\n{json.dumps(waybar_output)}")
+    print("\nWeather memory logs and CSV tracking pipelines written successfully.")
 
 if __name__ == "__main__":
     main()
