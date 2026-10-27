@@ -115,7 +115,6 @@ open your text editor and create a bash script named weather_refresh and copy th
 while : ; do python3 $HOME/.bin/YOUR_WEATHER_FETCHER.py file you have cloned; sleep 900 ; done
 ~~~
 save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the terminal. add this script at your autostart.
-
 [PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/NimbusCoreWeather.png)  
 [RAINMETER PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Preview_2.PNG)
 [Conky & Panel PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Conky_n_simplepanel-preview.png)
