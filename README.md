@@ -120,4 +120,6 @@ save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the
 
 [RAINMETER PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Preview_2.PNG)
 
+[Conky & Panel PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Conky_n_simplepanel-preview.png)
+
 
