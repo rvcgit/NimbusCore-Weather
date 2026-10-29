@@ -117,6 +117,8 @@ while : ; do python3 $HOME/.bin/YOUR_WEATHER_FETCHER.py file you have cloned; sl
 save it, make it executable by 'chmod a+x ~/.bin/weather_refresh' command in the terminal. add this script at your autostart.
 [PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/NimbusCoreWeather.png)  
 [RAINMETER PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Preview_2.PNG)
-[Conky & Panel PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Conky_n_simplepanel-preview.png)
+ [Conky & Panel PREVIEW](https://github.com/rvcgit/NimbusCore-Weather/blob/main/Conky_n_simplepanel-preview.png)
+
+ **UPDATE:** For Rainmeter Users; if icons not rendered properly, alternative ini with icon codes can be used.
 
 
