@@ -28,10 +28,13 @@ TIMEZONE = "Asia/Kolkata"
 def get_coordinates():
     """Returns coordinates using explicit manual variables first, falling back to public IP."""
     if not AUTO_DETECT_LOCATION and MANUAL_LAT is not None and MANUAL_LON is not None:
-        print(f"Prioritizing manual override coordinates: latitude={MANUAL_LAT:.4f}, longitude={MANUAL_LON:.4f}")
+        if os.isatty(1):
+            print(f"Prioritizing manual override coordinates: latitude={MANUAL_LAT:.4f}, longitude={MANUAL_LON:.4f}")
         return float(MANUAL_LAT), float(MANUAL_LON)
 
-    print("Scanning public IP geolocation parameters...")
+    if os.isatty(1):
+        print("Scanning public IP geolocation parameters...")
+        
     try:
         response = requests.get("https://ipwho.is", timeout=5)
         response.raise_for_status()
@@ -41,12 +44,14 @@ def get_coordinates():
             lat = float(location["latitude"])
             lon = float(location["longitude"])
             if -90 <= lat <= 90 and -180 <= lon <= 180:
-                print(f"Auto-detected location: latitude={lat:.4f}, longitude={lon:.4f}")
+                if os.isatty(1):
+                    print(f"Auto-detected location: latitude={lat:.4f}, longitude={lon:.4f}")
                 return lat, lon
         raise ValueError("Geolocation service returned invalid coordinates.")
     except Exception as exc:
         if MANUAL_LAT is not None and MANUAL_LON is not None:
-            print(f"Geolocation failed. Falling back to manual coordinates: ({MANUAL_LAT}, {MANUAL_LON})")
+            if os.isatty(1):
+                print(f"Geolocation failed. Falling back to manual coordinates: ({MANUAL_LAT}, {MANUAL_LON})")
             return float(MANUAL_LAT), float(MANUAL_LON)
         raise RuntimeError("Could not resolve coordinates. Configure manual fallbacks.") from exc
 
@@ -273,7 +278,6 @@ def main():
     m_phase = moon_phase()
 
     # ==================== PART 6: VALUE EXTRACTION & PARSING ====================
-    # REMOVED EARLY RETURN: Replaced with a managed exception rule
     if weather_data is None or "current" not in weather_data:
         raise RuntimeError("Weather payload is invalid or unavailable.")
 
@@ -372,21 +376,35 @@ def main():
     except Exception:
         pass
 
-    print("\n================== CURRENT CLIMATE STATE ==================")
-    print(f"Condition  : {icon}  {cond_text}")
-    print(f"Temperature: {temp:.1f}\u00b0C (Feels Like: {apparent_temp:.1f}\u00b0C)")
-    print(f"Wind State : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
-    print(f"Air Index  : US AQI {us_aqi} (PM2.5: {pm25} \u00b5g/m\u00b3)")
-    print(f"Lunar Cycle: {m_phase}")
-    print("===========================================================")
+    # 1. RESOLVE THE AIR QUALITY INTENSITY PHRASE DIRECTLY IN-SCRIPT
+    try:
+        aqi_val = int(us_aqi)
+        if aqi_val <= 50: aqi_desc = "Good 🟢"
+        elif aqi_val <= 100: aqi_desc = "Moderate 🟡"
+        elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
+        elif aqi_val <= 200: aqi_desc = "Unhealthy 🔴"
+        elif aqi_val <= 300: aqi_desc = "Very Unhealthy 🟣"
+        else: aqi_desc = "Hazardous 🟤"
+    except Exception:
+        aqi_desc = "Unknown"
 
+    if os.isatty(1):
+        print("\n================== CURRENT CLIMATE STATE ==================")
+        print(f"Condition  : {icon}  {cond_text}")
+        print(f"Temperature: {temp:.1f}\u00b0C (Feels Like: {apparent_temp:.1f}\u00b0C)")
+        print(f"Wind State : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
+        print(f"Air Index  : US AQI {us_aqi} ({aqi_desc})")
+        print(f"Lunar Cycle: {m_phase}")
+        print("===========================================================")
+
+    # 2. INJECT THE INTENSITY INTO THE HOVER TOOLTIP MENU
     tooltip_top = (
         "Condition: {} {}\n"
         "Temperature: {:.1f}\u00b0C\n"
         "Wind Speed: {:.1f} m/s {} ({})\n"
-        "Air Quality: US AQI {}\n"
+        "Air Quality: US AQI {} ({})\n"
         "Lunar Cycle: {}"
-    ).format(icon, cond_text, temp, wind_speed, compass_arr, compass_pt, us_aqi, m_phase)
+    ).format(icon, cond_text, temp, wind_speed, compass_arr, compass_pt, us_aqi, aqi_desc, m_phase)
 
     full_tooltip = "{}\n\n{}".format(tooltip_top, forecast_text)
 
@@ -422,4 +440,3 @@ if __name__ == "__main__":
         main()
     except Exception:
         _serve_cache_fallback()
-
