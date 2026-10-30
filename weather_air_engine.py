@@ -14,7 +14,7 @@ from pathlib import Path
 import requests
 
 # ==================== GLOBAL USER SETTINGS ====================
-AUTO_DETECT_LOCATION = True
+AUTO_DETECT_LOCATION = True # EDITTO False if manual Coordinates are needed
 
 # Overrides when AUTO_DETECT_LOCATION = False, or when IP geolocation fails.
 MANUAL_LAT = None  # Edit with Specific Coordinate [ Latitude ]
@@ -26,12 +26,18 @@ TIMEZONE = "Asia/Kolkata"
 # ==================== CROSS-PLATFORM LOCATION DETECTION ====================
 
 def get_coordinates():
-    """Returns coordinates using explicit manual variables first, falling back to public IP."""
-    if not AUTO_DETECT_LOCATION and MANUAL_LAT is not None and MANUAL_LON is not None:
-        if os.isatty(1):
-            print(f"Prioritizing manual override coordinates: latitude={MANUAL_LAT:.4f}, longitude={MANUAL_LON:.4f}")
-        return float(MANUAL_LAT), float(MANUAL_LON)
+    """Returns coordinates using explicit manual variables first when auto-detect is disabled."""
+    # 1. 🌟 CORE STRATEGY: Prioritise manual coordinates immediately if auto-detect is turned OFF
+    if not AUTO_DETECT_LOCATION:
+        if MANUAL_LAT is not None and MANUAL_LON is not None:
+            if os.isatty(1):
+                print(f"[LOCATION] Using manual override: latitude={MANUAL_LAT:.4f}, longitude={MANUAL_LON:.4f}")
+            return float(MANUAL_LAT), float(MANUAL_LON)
+        else:
+            if os.isatty(1):
+                print("[LOCATION] WARNING: AUTO_DETECT_LOCATION is False, but manual coordinates are None!")
 
+    # 2. NETWORK FALLBACK: Only scan public IP parameters if explicitly enabled or if manual setup is blank
     if os.isatty(1):
         print("Scanning public IP geolocation parameters...")
         
@@ -48,12 +54,15 @@ def get_coordinates():
                     print(f"Auto-detected location: latitude={lat:.4f}, longitude={lon:.4f}")
                 return lat, lon
         raise ValueError("Geolocation service returned invalid coordinates.")
+        
     except Exception as exc:
+        # Emergency backup check if network lookup hits a dead end
         if MANUAL_LAT is not None and MANUAL_LON is not None:
             if os.isatty(1):
                 print(f"Geolocation failed. Falling back to manual coordinates: ({MANUAL_LAT}, {MANUAL_LON})")
             return float(MANUAL_LAT), float(MANUAL_LON)
         raise RuntimeError("Could not resolve coordinates. Configure manual fallbacks.") from exc
+
 
 
 # ==================== RUNTIME MEMORY FILESYSTEM MAPPING ====================
@@ -308,7 +317,7 @@ def main():
     cond_text = WMO_TEXT_MAP.get(wmo_code, "Unknown")
 
     atomic_write("weather_icon_cache", icon)
-    atomic_write("weather_temp_cache", f"{temp:.1f}\u00b0C")
+    atomic_write("weather_temp_cache", f"{temp:.0f}\u00b0C")
     atomic_write("weather_temp_apparent_cache", f"{apparent_temp:.1f}\u00b0C")
     atomic_write("weather_code_cache", str(wmo_code))
     atomic_write("weather_condition_cache", cond_text)
