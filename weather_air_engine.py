@@ -14,7 +14,7 @@ from pathlib import Path
 import requests
 
 # ==================== GLOBAL USER SETTINGS ====================
-AUTO_DETECT_LOCATION = True # EDITTO False if manual Coordinates are needed
+AUTO_DETECT_LOCATION = True
 
 # Overrides when AUTO_DETECT_LOCATION = False, or when IP geolocation fails.
 MANUAL_LAT = None  # Edit with Specific Coordinate [ Latitude ]
@@ -286,83 +286,25 @@ def main():
 
     m_phase = moon_phase()
 
-    # ==================== PART 6: VALUE EXTRACTION & PARSING ====================
-    if weather_data is None or "current" not in weather_data:
-        raise RuntimeError("Weather payload is invalid or unavailable.")
-
-    current_w = weather_data.get("current", {})
-    temp = current_w.get("temperature_2m", 0.0)
-    apparent_temp = current_w.get("apparent_temperature", 0.0)
-    wmo_code = current_w.get("weather_code", 0)
-    is_day = int(current_w.get("is_day", 1))
-    wind_speed = current_w.get("wind_speed_10m", 0.0)
-    wind_deg = current_w.get("wind_direction_10m", 0)
-    
-    aqi_hourly = aqi_data.get("hourly", {}) if aqi_data else {}
-    pm25_list = aqi_hourly.get("pm2_5", [])
-    server_aqi_list = aqi_hourly.get("us_aqi", [])
-    
-    pm25 = pm25_list[0] if len(pm25_list) > 0 else None
-    server_aqi = server_aqi_list[0] if len(server_aqi_list) > 0 else None
-    
-    if server_aqi is not None:
-        us_aqi = int(server_aqi)
-    elif pm25 is not None:
-        us_aqi = calculate_us_aqi(pm25)
-    else:
-        us_aqi = "--"
-
-    compass_pt, compass_arr = get_16_point_compass(wind_deg)
-    icon = weather_icon(wmo_code, is_day == 1)
-    cond_text = WMO_TEXT_MAP.get(wmo_code, "Unknown")
-
-    atomic_write("weather_icon_cache", icon)
-    atomic_write("weather_temp_cache", f"{temp:.0f}\u00b0C")
-    atomic_write("weather_temp_apparent_cache", f"{apparent_temp:.1f}\u00b0C")
-    atomic_write("weather_code_cache", str(wmo_code))
-    atomic_write("weather_condition_cache", cond_text)
-    atomic_write("weather_moon_phase_cache", m_phase)
-    atomic_write("weather_wind_speed_cache", f"{ICONS['wind']} {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
-    atomic_write("weather_wind_direction_cache", f"{compass_arr} ({compass_pt})")
-    atomic_write("weather_time_status", "day" if is_day == 1 else "night")
-    atomic_write("air_aqi_cache", str(us_aqi))
+    # 6. HISTORICAL EXPORT STREAMING (Atomic CSV Exporters)
+    try:
+        hourly = weather_data.get("hourly", {})
+        hourly_lines = ["datetime,temperature_2m,weather_code"]
+        for i in range(min(24, len(hourly.get("time", [])))):
+            t_str = hourly["time"][i].replace("T", " ")
+            hourly_lines.append(f"{t_str},{hourly['temperature_2m'][i]},{hourly['weather_code'][i]}")
+        atomic_write("hourly_weather.csv", "\n".join(hourly_lines) + "\n")
+    except Exception:
+        pass
 
     try:
-        daily_data = weather_data.get("daily", {})
-        times = daily_data.get("time", ["--", "--"])
-        max_temps = daily_data.get("temperature_2m_max", [0.0, 0.0])
-        min_temps = daily_data.get("temperature_2m_min", [0.0, 0.0])
-        codes = daily_data.get("weather_code", [0, 0])
-
-        d1_date = times[0] if len(times) > 0 else "--"
-        d2_date = times[1] if len(times) > 1 else "--"
-        d1_max = max_temps[0] if len(max_temps) > 0 else 0.0
-        d2_max = max_temps[1] if len(max_temps) > 1 else 0.0
-        d1_min = min_temps[0] if len(min_temps) > 0 else 0.0
-        d2_min = min_temps[1] if len(min_temps) > 1 else 0.0
-        d1_code = codes[0] if len(codes) > 0 else 0
-        d2_code = codes[1] if len(codes) > 1 else 0
-        
-        d1_txt = WMO_TEXT_MAP.get(int(d1_code), "Unknown")
-        d2_txt = WMO_TEXT_MAP.get(int(d2_code), "Unknown")
-        
-        forecast_text = (
-            "📅 {} (Today)\n"
-            "✨ Condition: {}\n"
-            "🔺 Max: {}°C\n"
-            "🔻 Min: {}°C\n\n"
-            "📅 {} (Tomorrow)\n"
-            "✨ Condition: {}\n"
-            "🔺 Max: {}°C\n"
-            "🔻 Min: {}°C"
-        ).format(
-            str(d1_date), str(d1_txt), round(d1_max), round(d1_min),
-            str(d2_date), str(d2_txt), round(d2_max), round(d2_min)
-        )
-        atomic_write("weather_forecast_cache", forecast_text)
+        daily = weather_data.get("daily", {})
+        daily_lines = ["date,weather_code,temperature_2m_max,temperature_2m_min"]
+        for i in range(min(5, len(daily.get("time", [])))):
+            daily_lines.append(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}")
+        atomic_write("daily_weather.csv", "\n".join(daily_lines) + "\n")
     except Exception:
-        forecast_text = "Forecast Details Unavailable"
-        atomic_write("weather_forecast_cache", forecast_text)
+        pass
 
     # ==================== PART 7: OUTPUT & WAYBAR GENERATOR ====================
     try:
@@ -384,6 +326,13 @@ def main():
                 f.write(f"{t_str},{hourly['temperature_2m'][i]},{hourly['weather_code'][i]}\n")
     except Exception:
         pass
+        daily = weather_data.get("daily", {})
+        with open(CACHE_DIR / "daily_weather.csv", "w", encoding="utf-8") as f:
+            f.write("date,weather_code,temperature_2m_max,temperature_2m_min\n")
+            for i in range(min(5, len(daily.get("time", [])))):
+                f.write(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}\n")
+    except Exception:
+        pass
 
     # 1. RESOLVE THE AIR QUALITY INTENSITY PHRASE DIRECTLY IN-SCRIPT
     try:
@@ -402,7 +351,7 @@ def main():
         print(f"Condition  : {icon}  {cond_text}")
         print(f"Temperature: {temp:.1f}\u00b0C (Feels Like: {apparent_temp:.1f}\u00b0C)")
         print(f"Wind State : {wind_speed:.1f} m/s {compass_arr} ({compass_pt})")
-        print(f"Air Index  : US AQI {us_aqi} ({aqi_desc})")
+        print(f"Air Index  : AQI {us_aqi} ({aqi_desc})")
         print(f"Lunar Cycle: {m_phase}")
         print("===========================================================")
 
@@ -411,7 +360,7 @@ def main():
         "Condition: {} {}\n"
         "Temperature: {:.1f}\u00b0C\n"
         "Wind Speed: {:.1f} m/s {} ({})\n"
-        "Air Quality: US AQI {} ({})\n"
+        "Air Quality: AQI {} ({})\n"
         "Lunar Cycle: {}"
     ).format(icon, cond_text, temp, wind_speed, compass_arr, compass_pt, us_aqi, aqi_desc, m_phase)
 
