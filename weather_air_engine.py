@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ---------------------------------------------------------------------------
-# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.7) - PART 1/7
-# Core imports, cross-platform location overrides, and timezone declarations.
+# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 1 OF 3
+# System initialization, global maps, and network geolocation routing.
 # ---------------------------------------------------------------------------
 
 import json
@@ -23,11 +23,11 @@ MANUAL_LON = None  # Edit with Specific Coordinate [ Longitude ]
 # Keep weather and air quality display synced to Indian Standard Time.
 TIMEZONE = "Asia/Kolkata"
 # ==============================================================
+
 # ==================== CROSS-PLATFORM LOCATION DETECTION ====================
 
 def get_coordinates():
     """Returns coordinates using explicit manual variables first when auto-detect is disabled."""
-    # 1. 🌟 CORE STRATEGY: Prioritise manual coordinates immediately if auto-detect is turned OFF
     if not AUTO_DETECT_LOCATION:
         if MANUAL_LAT is not None and MANUAL_LON is not None:
             if os.isatty(1):
@@ -37,7 +37,6 @@ def get_coordinates():
             if os.isatty(1):
                 print("[LOCATION] WARNING: AUTO_DETECT_LOCATION is False, but manual coordinates are None!")
 
-    # 2. NETWORK FALLBACK: Only scan public IP parameters if explicitly enabled or if manual setup is blank
     if os.isatty(1):
         print("Scanning public IP geolocation parameters...")
         
@@ -56,18 +55,14 @@ def get_coordinates():
         raise ValueError("Geolocation service returned invalid coordinates.")
         
     except Exception as exc:
-        # Emergency backup check if network lookup hits a dead end
         if MANUAL_LAT is not None and MANUAL_LON is not None:
             if os.isatty(1):
                 print(f"Geolocation failed. Falling back to manual coordinates: ({MANUAL_LAT}, {MANUAL_LON})")
             return float(MANUAL_LAT), float(MANUAL_LON)
         raise RuntimeError("Could not resolve coordinates. Configure manual fallbacks.") from exc
 
-
-
 # ==================== RUNTIME MEMORY FILESYSTEM MAPPING ====================
 
-# Detect Operating System layout and resolve volatile target directories dynamically
 SYSTEM_OS = platform.system().lower()
 if "win" in SYSTEM_OS:
     CACHE_DIR = Path(os.environ.get("LOCALAPPDATA", r"C:\Users\User\AppData\Local")) / "Temp" / "WeatherCache"
@@ -75,9 +70,9 @@ else:
     CACHE_DIR = Path("/tmp")
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 # ==================== NERD FONT GLYPH DICTIONARIES ====================
 
-# Explicit Character Node Glyphs bound to escaped hex addresses
 ICONS = {
     "sun": "\uf185",           #  Bright Day Sun
     "moon": "\uf186",          #  Dusk Time Moon
@@ -89,10 +84,9 @@ ICONS = {
     "rain": "\ue239",          #  Heavy Rain
     "snow": "\uf2dc",          #  Snow Fallback
     "storm": "\ue322",         #  Thunderstorm
-    "wind": "\uf11e",          #  Wind Decorative Icon   # alternate "\uEF16",  ##   Wind Decoration
+    "wind": "\uf11e",          #  Wind Decorative Icon
 }
 
-# Standard WMO Weather Code Mappings to English Text Phrasing
 WMO_TEXT_MAP = {
     0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
     45: "Foggy", 48: "Rime Fog", 51: "Light Drizzle", 53: "Moderate Drizzle",
@@ -104,7 +98,10 @@ WMO_TEXT_MAP = {
     85: "Slight Snow Showers", 86: "Heavy Snow Showers",
     95: "Thunderstorm", 96: "Thunderstorm with Slight Hail", 99: "Severe Thunderstorm"
 }
-# ==================== DATA MATHEMATICS & ALGORITHMIC HELPERS ====================
+# ---------------------------------------------------------------------------
+# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 2 OF 3
+# Mathematical algorithmic data handlers and parallel endpoints network core.
+# ---------------------------------------------------------------------------
 
 def weather_icon(code, is_day):
     """Maps WMO codes directly to Nerd Font glyph positions based on day/night states."""
@@ -126,18 +123,6 @@ def get_16_point_compass(degrees):
     index = int((degrees + 11.25) / 22.5) % 16
     return points[index], arrows[index]
 
-def calculate_us_aqi(pm25):
-    """Implements standard US EPA piece-wise scaling curves for particle matter."""
-    if pm25 is None or pm25 < 0: return 0
-    breakpoints = [
-        (0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)
-    ]
-    for low_c, high_c, low_i, high_i in breakpoints:
-        if low_c <= pm25 <= high_c:
-            return int(((high_i - low_i) / (high_c - low_c)) * (pm25 - low_c) + low_i)
-    return 500
-
 def moon_phase():
     """Computes exact lunar cycles relative to the synodic epoch base line date."""
     now = datetime.now(timezone.utc)
@@ -156,63 +141,6 @@ def moon_phase():
     elif fraction < 0.8125: m_glyph, name = "\ue3c4", "Last Quarter"
     else: m_glyph, name = "\ue3c0", "Waning Crescent"
     return f"{m_glyph} {name} ({illumination:.0f}%)"
-# ==================== CLIMATE CALCULATION ENGINES ====================
-
-def weather_icon(code, is_day):
-    """Maps WMO weather codes to specific day/night character glyph definitions."""
-    if code == 0: return ICONS["sun"] if is_day else ICONS["moon"]
-    if code in (1, 2): return ICONS["partly_day"] if is_day else ICONS["partly_night"]
-    if code == 3: return ICONS["cloud"]
-    if code in (45, 48): return ICONS["fog"]
-    if code in (51, 53, 55, 56, 57): return ICONS["drizzle"]
-    if code in (61, 63, 65, 66, 67, 80, 81, 82): return ICONS["rain"]
-    if code in (71, 73, 75, 77, 85, 86): return ICONS["snow"]
-    if code in (95, 96, 99): return ICONS["storm"]
-    return ICONS["cloud"]
-
-
-def get_16_point_compass(degrees):
-    """Calculates wind heading directions and structural compass tracking arrows."""
-    degrees = (degrees % 360 + 360) % 360
-    points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-    arrows = ["\u2193", "\u2199", "\u2199", "\u2199", "\u2190", "\u2196", "\u2196", "\u2196", "\u2191", "\u2197", "\u2197", "\u2197", "\u2192", "\u2198", "\u2198", "\u2198"]
-    index = int((degrees + 11.25) / 22.5) % 16
-    return points[index], arrows[index]
-
-
-def calculate_us_aqi(pm25):
-    """Converts raw PM2.5 particle values into a standardized US EPA AQI integer."""
-    if pm25 is None or pm25 < 0: return 0
-    breakpoints = [
-        (0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)
-    ]
-    for low_c, high_c, low_i, high_i in breakpoints:
-        if low_c <= pm25 <= high_c:
-            return int(((high_i - low_i) / (high_c - low_c)) * (pm25 - low_c) + low_i)
-    return 500
-
-
-def moon_phase():
-    """Tracks historical lunar cycles to compute the active glyph name and percent lit."""
-    now = datetime.now(timezone.utc)
-    new_moon = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
-    synodic_month = 29.530588853
-    age = ((now - new_moon).total_seconds() / 86400) % synodic_month
-    fraction = age / synodic_month
-    illumination = (1 - math.cos(2 * math.pi * fraction)) / 2 * 100
-    
-    if fraction < 0.0625 or fraction >= 0.9375: m_glyph, name = "\ue3e3", "New Moon"
-    elif fraction < 0.1875: m_glyph, name = "\ue3d5", "Waxing Crescent"
-    elif fraction < 0.3125: m_glyph, name = "\ue3ce", "First Quarter"
-    elif fraction < 0.4375: m_glyph, name = "\ue3ca", "Waxing Gibbous"
-    elif fraction < 0.5625: m_glyph, name = "\ue3e3", "Full Moon"
-    elif fraction < 0.6875: m_glyph, name = "\ue3c7", "Waning Gibbous"
-    elif fraction < 0.8125: m_glyph, name = "\ue3c4", "Last Quarter"
-    else: m_glyph, name = "\ue3c0", "Waning Crescent"
-    return f"{m_glyph} {name} ({illumination:.0f}%)"
-
-# ==================== ATOMIC SYSTEM WRITE PIPELINE ====================
 
 def atomic_write(filename, content):
     """Safely updates target disk files using temporary replacement buffers."""
@@ -220,13 +148,12 @@ def atomic_write(filename, content):
     fd, temp_name = tempfile.mkstemp(dir=str(CACHE_DIR))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as file:
-            file.write(content + "\n")
+            file.write(str(content) + "\n")
         os.replace(temp_name, destination)
     finally:
         if os.path.exists(temp_name):
             try: os.unlink(temp_name)
             except OSError: pass
-
 
 # ==================== CORE DATA INGESTION ENGINE ====================
 
@@ -237,14 +164,13 @@ def main():
         print(f"Location Error: {e}")
         return
 
-    # 1. STRUCTURING DYNAMIC CLIMATE API QUERY SCHEMES
     weather_url = "https://api.open-meteo.com/v1/forecast"
     weather_params = {
         "latitude": lat,
         "longitude": lon,
-        "current": ["temperature_2m", "apparent_temperature", "wind_speed_10m", "wind_direction_10m", "is_day", "weather_code"],
-        "hourly": ["temperature_2m", "weather_code"],
-        "daily": ["temperature_2m_max", "temperature_2m_min", "weather_code"],
+        "current": "temperature_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,is_day,weather_code",
+        "hourly": "temperature_2m,weather_code",
+        "daily": "temperature_2m_max,temperature_2m_min,weather_code",
         "timezone": TIMEZONE,
         "forecast_days": 5,
         "temperature_unit": "celsius",
@@ -255,45 +181,88 @@ def main():
     aqi_params = {
         "latitude": lat,
         "longitude": lon,
-        # CRITICAL FIX: Air quality parameters must be requested in the "hourly" parameter list
-        "hourly": ["pm2_5", "us_aqi"],
+        "hourly": "pm2_5,us_aqi",
         "timezone": TIMEZONE
     }
 
-    # ==================== PART 5: DATA INGESTION ENGINE ====================
-    # Executing Parallel Endpoint Handshakes safely with try/except blocks
     try:
         w_res = requests.get(weather_url, params=weather_params, timeout=20)
-        if w_res.status_code == 200:
-            weather_data = w_res.json()
-        else:
-            print(f"Weather API Fetch Failure: Status {w_res.status_code}")
-            weather_data = None
+        weather_data = w_res.json() if w_res.status_code == 200 else None
     except Exception as e:
         print(f"Weather API Network Failure: {e}")
         weather_data = None
 
     try:
         a_res = requests.get(aqi_url, params=aqi_params, timeout=20)
-        if a_res.status_code == 200:
-            aqi_data = a_res.json()
-        else:
-            print(f"Air Quality API Fetch Failure: Status {a_res.status_code}")
-            aqi_data = None
+        aqi_data = a_res.json() if a_res.status_code == 200 else None
     except Exception as e:
         print(f"Air Quality API Network Failure: {e}")
         aqi_data = None
 
+    if not weather_data or not aqi_data:
+        print("[ERROR] Failed to fetch data from API endpoints.")
+        _serve_cache_fallback()
+        return
+# ---------------------------------------------------------------------------
+# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 3 OF 3
+# Extraction logic mapping out all 10 cache tokens and generating CSV tables.
+# ---------------------------------------------------------------------------
+
+    # EXTRACT CORE RUNTIME DATA PAYLOAD VALUES
+    current = weather_data.get("current", {})
+    temp = current.get("temperature_2m", 0.0)
+    apparent_temp = current.get("apparent_temperature", 0.0)
+    wind_speed = current.get("wind_speed_10m", 0.0)
+    wind_dir = current.get("wind_direction_10m", 0)
+    is_day = current.get("is_day", 1)
+    w_code = current.get("weather_code", 0)
+
+    # Safely extract first valid index out of the hourly timelines configuration arrays
+    hourly_aqi = aqi_data.get("hourly", {})
+    us_aqi_list = hourly_aqi.get("us_aqi", [0])
+    us_aqi = us_aqi_list[0] if isinstance(us_aqi_list, list) and len(us_aqi_list) > 0 else 0
+
+    cond_text = WMO_TEXT_MAP.get(w_code, "Unknown Sky")
+    icon = weather_icon(w_code, is_day)
+    compass_pt, compass_arr = get_16_point_compass(wind_dir)
     m_phase = moon_phase()
 
-    # 6. HISTORICAL EXPORT STREAMING (Atomic CSV Exporters)
+    # ==================== ATOMIC SYSTEM WRITE PIPELINE ====================
+    try:
+        # 1. Main Data Structural JSON Object Map
+        compound_json = {
+            "current": current,
+            "weather_api": weather_data,
+            "air_quality_api": aqi_data,
+            "meta": {"processed_at": datetime.now(timezone.utc).isoformat(), "lat": lat, "lon": lon}
+        }
+        atomic_write("weather_api_cache.json", json.dumps(compound_json, indent=2))
+        
+        # 2. Standalone Cache Nodes Writing Pipeline
+        atomic_write("air_aqi_cache", str(us_aqi))
+        atomic_write("weather_forecast_cache", cond_text)
+        atomic_write("weather_temp_cache", f"{temp:.1f}")
+        atomic_write("weather_icon_cache", icon)
+        atomic_write("weather_moon_phase_cache", m_phase)
+        atomic_write("weather_wmo_code", str(w_code))
+        atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f}")
+        atomic_write("weather_wind_direction_cache", f"{wind_dir}")
+        atomic_write("weather_condition_cache", f"{icon} {cond_text}")
+
+        if os.isatty(1):
+            print(f"[SUCCESS] Refreshed all 10 cache blocks inside: {CACHE_DIR}")
+
+    except Exception as e:
+        print(f"Disk Write Configuration Interruption Error: {e}")
+
+    # ==================== HISTORICAL CSV TABLES EXPORTERS ====================
     try:
         hourly = weather_data.get("hourly", {})
         hourly_lines = ["datetime,temperature_2m,weather_code"]
         for i in range(min(24, len(hourly.get("time", [])))):
             t_str = hourly["time"][i].replace("T", " ")
             hourly_lines.append(f"{t_str},{hourly['temperature_2m'][i]},{hourly['weather_code'][i]}")
-        atomic_write("hourly_weather.csv", "\n".join(hourly_lines) + "\n")
+        atomic_write("hourly_weather.csv", "\n".join(hourly_lines))
     except Exception:
         pass
 
@@ -302,46 +271,17 @@ def main():
         daily_lines = ["date,weather_code,temperature_2m_max,temperature_2m_min"]
         for i in range(min(5, len(daily.get("time", [])))):
             daily_lines.append(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}")
-        atomic_write("daily_weather.csv", "\n".join(daily_lines) + "\n")
+        atomic_write("daily_weather.csv", "\n".join(daily_lines))
     except Exception:
         pass
 
-    # ==================== PART 7: OUTPUT & WAYBAR GENERATOR ====================
+    # Process Terminal Standard Output Logging Layout
     try:
-        compound_json = {
-            "weather_api": weather_data,
-            "air_quality_api": aqi_data,
-            "meta": {"processed_at": datetime.now(timezone.utc).isoformat(), "lat": lat, "lon": lon}
-        }
-        atomic_write("weather_api_cache.json", json.dumps(compound_json, indent=2))
-    except Exception:
-        pass
-
-    try:
-        hourly = weather_data.get("hourly", {})
-        with open(CACHE_DIR / "hourly_weather.csv", "w", encoding="utf-8") as f:
-            f.write("datetime,temperature_2m,weather_code\n")
-            for i in range(min(24, len(hourly.get("time", [])))):
-                t_str = hourly["time"][i].replace("T", " ")
-                f.write(f"{t_str},{hourly['temperature_2m'][i]},{hourly['weather_code'][i]}\n")
-    except Exception:
-        pass
-        daily = weather_data.get("daily", {})
-        with open(CACHE_DIR / "daily_weather.csv", "w", encoding="utf-8") as f:
-            f.write("date,weather_code,temperature_2m_max,temperature_2m_min\n")
-            for i in range(min(5, len(daily.get("time", [])))):
-                f.write(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}\n")
-    except Exception:
-        pass
-
-    # 1. RESOLVE THE AIR QUALITY INTENSITY PHRASE DIRECTLY IN-SCRIPT
-    try:
-        aqi_val = int(us_aqi)
-        if aqi_val <= 50: aqi_desc = "Good 🟢"
-        elif aqi_val <= 100: aqi_desc = "Moderate 🟡"
-        elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
-        elif aqi_val <= 200: aqi_desc = "Unhealthy 🔴"
-        elif aqi_val <= 300: aqi_desc = "Very Unhealthy 🟣"
+        if us_aqi <= 50: aqi_desc = "Good 🟢"
+        elif us_aqi <= 100: aqi_desc = "Moderate 🟡"
+        elif us_aqi <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
+        elif us_aqi <= 200: aqi_desc = "Unhealthy 🔴"
+        elif us_aqi <= 300: aqi_desc = "Very Unhealthy 🟣"
         else: aqi_desc = "Hazardous 🟤"
     except Exception:
         aqi_desc = "Unknown"
@@ -355,37 +295,22 @@ def main():
         print(f"Lunar Cycle: {m_phase}")
         print("===========================================================")
 
-    # 2. INJECT THE INTENSITY INTO THE HOVER TOOLTIP MENU
-    tooltip_top = (
-        "Condition: {} {}\n"
-        "Temperature: {:.1f}\u00b0C\n"
-        "Wind Speed: {:.1f} m/s {} ({})\n"
-        "Air Quality: AQI {} ({})\n"
-        "Lunar Cycle: {}"
-    ).format(icon, cond_text, temp, wind_speed, compass_arr, compass_pt, us_aqi, aqi_desc, m_phase)
-
-    full_tooltip = "{}\n\n{}".format(tooltip_top, forecast_text)
-
     waybar_payload = {
         "text": f"{icon} {temp:.1f}\u00b0C",
         "alt": cond_text,
-        "tooltip": full_tooltip,
+        "tooltip": f"AQI: {us_aqi} ({aqi_desc})\nMoon: {m_phase}",
         "class": "weather",
-        "percentage": int(us_aqi) if str(us_aqi).isdigit() else 0
+        "percentage": int(us_aqi)
     }
     print(json.dumps(waybar_payload, ensure_ascii=False))
 
 
 def _serve_cache_fallback():
-    """Reads disk caches to output clean data strings to stdout for Waybar."""
     try:
-        with open(CACHE_DIR / "weather_icon_cache", "r", encoding="utf-8") as f: fallback_icon = f.read().strip()
-        with open(CACHE_DIR / "weather_temp_cache", "r", encoding="utf-8") as f: fallback_temp = f.read().strip()
         with open(CACHE_DIR / "weather_forecast_cache", "r", encoding="utf-8") as f: fallback_forecast = f.read().strip()
-        
         cache_payload = {
-            "text": f"{fallback_icon} {fallback_temp}",
-            "tooltip": f"⚠️ Running in Offline Mode\n\n{fallback_forecast}",
+            "text": "--\u00b0C",
+            "tooltip": f"⚠️ Offline Mode\n\n{fallback_forecast}",
             "class": "weather-offline"
         }
         print(json.dumps(cache_payload, ensure_ascii=False))
@@ -394,8 +319,4 @@ def _serve_cache_fallback():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        _serve_cache_fallback()
-
+    main()
