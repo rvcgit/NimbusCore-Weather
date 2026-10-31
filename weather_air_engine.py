@@ -217,19 +217,46 @@ def main():
     is_day = current.get("is_day", 1)
     w_code = current.get("weather_code", 0)
 
-    # Safely extract first valid index out of the hourly timelines configuration arrays
+    # FIXED: Safely extract only the current hour's integer out of the raw forecast list layout
     hourly_aqi = aqi_data.get("hourly", {})
     us_aqi_list = hourly_aqi.get("us_aqi", [0])
-    us_aqi = us_aqi_list[0] if isinstance(us_aqi_list, list) and len(us_aqi_list) > 0 else 0
+    
+    if isinstance(us_aqi_list, list) and len(us_aqi_list) > 0:
+        us_aqi = us_aqi_list[0]
+    else:
+        us_aqi = 0
 
     cond_text = WMO_TEXT_MAP.get(w_code, "Unknown Sky")
     icon = weather_icon(w_code, is_day)
     compass_pt, compass_arr = get_16_point_compass(wind_dir)
     m_phase = moon_phase()
 
+    # ==================== DYNAMIC 5-DAY TOOLTIP GENERATOR ====================
+    try:
+        daily = weather_data.get("daily", {})
+        forecast_lines = []
+        
+        for i in range(min(5, len(daily.get("time", [])))):
+            raw_date = daily["time"][i]
+            day_w_code = daily["weather_code"][i]
+            max_t = daily["temperature_2m_max"][i]
+            min_t = daily["temperature_2m_min"][i]
+            
+            date_obj = datetime.strptime(raw_date, "%Y-%m-%d")
+            day_name = date_obj.strftime("%a")
+            
+            day_icon = weather_icon(day_w_code, is_day=1)
+            day_text = WMO_TEXT_MAP.get(day_w_code, "Unknown Sky")
+            
+            line_str = f"{day_name}: {day_icon} {day_text} (Max: {max_t:.0f}\u00b0C / Min: {min_t:.0f}\u00b0C)"
+            forecast_lines.append(line_str)
+            
+        extended_forecast_summary = "\n".join(forecast_lines)
+    except Exception as e:
+        extended_forecast_summary = cond_text
+
     # ==================== ATOMIC SYSTEM WRITE PIPELINE ====================
     try:
-        # 1. Main Data Structural JSON Object Map
         compound_json = {
             "current": current,
             "weather_api": weather_data,
@@ -238,9 +265,9 @@ def main():
         }
         atomic_write("weather_api_cache.json", json.dumps(compound_json, indent=2))
         
-        # 2. Standalone Cache Nodes Writing Pipeline
+        # Standalone Cache Nodes Writing Pipeline
         atomic_write("air_aqi_cache", str(us_aqi))
-        atomic_write("weather_forecast_cache", cond_text)
+        atomic_write("weather_forecast_cache", extended_forecast_summary)
         atomic_write("weather_temp_cache", f"{temp:.1f}")
         atomic_write("weather_icon_cache", icon)
         atomic_write("weather_moon_phase_cache", m_phase)
@@ -267,21 +294,22 @@ def main():
         pass
 
     try:
-        daily = weather_data.get("daily", {})
+        daily_data = weather_data.get("daily", {})
         daily_lines = ["date,weather_code,temperature_2m_max,temperature_2m_min"]
-        for i in range(min(5, len(daily.get("time", [])))):
-            daily_lines.append(f"{daily['time'][i]},{daily['weather_code'][i]},{daily['temperature_2m_max'][i]},{daily['temperature_2m_min'][i]}")
+        for i in range(min(5, len(daily_data.get("time", [])))):
+            daily_lines.append(f"{daily_data['time'][i]},{daily_data['weather_code'][i]},{daily_data['temperature_2m_max'][i]},{daily_data['temperature_2m_min'][i]}")
         atomic_write("daily_weather.csv", "\n".join(daily_lines))
     except Exception:
         pass
 
     # Process Terminal Standard Output Logging Layout
     try:
-        if us_aqi <= 50: aqi_desc = "Good 🟢"
-        elif us_aqi <= 100: aqi_desc = "Moderate 🟡"
-        elif us_aqi <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
-        elif us_aqi <= 200: aqi_desc = "Unhealthy 🔴"
-        elif us_aqi <= 300: aqi_desc = "Very Unhealthy 🟣"
+        aqi_val = int(us_aqi)
+        if aqi_val <= 50: aqi_desc = "Good 🟢"
+        elif aqi_val <= 100: aqi_desc = "Moderate 🟡"
+        elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
+        elif aqi_val <= 200: aqi_desc = "Unhealthy 🔴"
+        elif aqi_val <= 300: aqi_desc = "Very Unhealthy 🟣"
         else: aqi_desc = "Hazardous 🟤"
     except Exception:
         aqi_desc = "Unknown"
