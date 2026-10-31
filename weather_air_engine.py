@@ -14,7 +14,7 @@ from pathlib import Path
 import requests
 
 # ==================== GLOBAL USER SETTINGS ====================
-AUTO_DETECT_LOCATION = True
+AUTO_DETECT_LOCATION = True  # Edit to False if you need custom Lat Lon, before editing your coordinates below
 
 # Overrides when AUTO_DETECT_LOCATION = False, or when IP geolocation fails.
 MANUAL_LAT = None  # Edit with Specific Coordinate [ Latitude ]
@@ -324,9 +324,9 @@ def main():
         print("===========================================================")
 
     waybar_payload = {
-        "text": f"{icon} {temp:.1f}\u00b0C",
+        "text": f"{icon} {temp:.0f}\u00b0C",
         "alt": cond_text,
-        "tooltip": f"AQI: {us_aqi} ({aqi_desc})\nMoon: {m_phase}",
+        "tooltip": f"Feelslike: {apparent_temp:.0f}\u00b0C\nWind: {wind_speed:.1f} m/s {compass_arr} ({compass_pt})\nAQI: {us_aqi} ({aqi_desc})\nMoon: {m_phase}",
         "class": "weather",
         "percentage": int(us_aqi)
     }
