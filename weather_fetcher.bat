@@ -1,30 +1,20 @@
-Bat@echo off
+@echo off
 REM ============================================
 REM WeatherCache refresh loop - every 15 minutes
+REM Optimized for Elevated Background Task Execution
 REM ============================================
 
 :loop
-echo [%date% %time%] Clearing WeatherCache...
-
-REM Delete all files in WeatherCache folder
-REM /Q = quiet mode, /S = include subfolders, /F = force delete
+REM Clear data quietly. >nul 2>&1 completely squashes background stream logging.
 if exist "%LOCALAPPDATA%\Temp\WeatherCache\" (
-    del /Q /F /S "%LOCALAPPDATA%\Temp\WeatherCache\*"
+    del /Q /F /S "%LOCALAPPDATA%\Temp\WeatherCache\*" >nul 2>&1
 )
 
-REM Optional: remove empty subfolders
-for /d %%D in ("%LOCALAPPDATA%\Temp\WeatherCache\*") do rd /S /Q "%%D"
+REM Run your lightweight python collector script
+python "C:\apps\weather_air_engine.py" >nul 2>&1
+:: edit path above for alternative py scripts you use
 
-echo [%date% %time%] Running Python application...
-
-REM Run your Python script
-::REM Ensure Python is installed and in PATH
-python "C:\apps\weather_fetcher_X_platform.py"
-
-echo [%date% %time%] Cycle complete. Waiting 15 minutes...
-
-REM Wait 900 seconds (15 minutes)
+REM Sleep for 900 seconds quietly inside the loop session
 timeout /t 900 /nobreak >nul
 
 goto loop
-
