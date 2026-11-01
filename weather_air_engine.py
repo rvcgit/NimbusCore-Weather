@@ -273,9 +273,17 @@ def main():
         atomic_write("weather_icon_cache", icon)
         atomic_write("weather_moon_phase_cache", m_phase)
         atomic_write("weather_wmo_code", str(w_code))
-        atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f}")
-        atomic_write("weather_wind_direction_cache", f"{wind_dir}")
         atomic_write("weather_condition_cache", f"{icon} {cond_text}")
+        
+        # 1. Writes out the raw numerical degree direction (e.g., "290")
+        atomic_write("weather_wind_direction_cache", str(wind_dir))
+        
+        # 2. Combines them instantly into your exact custom layout format: "WINDSPEED(m/s) ARROW (TEXT)"
+        wind_custom_string = f"{wind_speed:.1f} m/s {compass_arr} ({compass_pt})"
+        atomic_write("wind_stats", wind_custom_string)
+        # -----------------------------------------------------------
+
+        atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f}")
 
         if os.isatty(1):
             print(f"[SUCCESS] Refreshed all 10 cache blocks inside: {CACHE_DIR}")
@@ -324,27 +332,23 @@ def main():
         print(f"Lunar Cycle: {m_phase}")
         print("===========================================================")
 
+    # Pull whichever cache dashboard is available on disk
+    tooltip_data = ""
+    for c_file in ["weather_desktop_dashboard", "weather_forecast_cache"]:
+        try:
+            with open(CACHE_DIR / c_file, "r", encoding="utf-8") as f:
+                tooltip_data = f.read().strip()
+            if tooltip_data: break
+        except: pass
+
     waybar_payload = {
-        "text": f"{icon} {temp:.1f}\u00b0C",
+        "text": f"{icon} {temp:.0f}\u00b0C",
         "alt": cond_text,
-        "tooltip": f"AQI: {us_aqi} ({aqi_desc})\nMoon: {m_phase}",
+        "tooltip": f"AQI: {us_aqi} ({aqi_desc})\nWind: {wind_speed:.1f} m/s {compass_arr} ({compass_pt})\nMoon: {m_phase}\nFeels Like: {apparent_temp:.0f}\u00b0C\n\n{tooltip_data}",
         "class": "weather",
         "percentage": int(us_aqi)
     }
     print(json.dumps(waybar_payload, ensure_ascii=False))
-
-
-def _serve_cache_fallback():
-    try:
-        with open(CACHE_DIR / "weather_forecast_cache", "r", encoding="utf-8") as f: fallback_forecast = f.read().strip()
-        cache_payload = {
-            "text": "--\u00b0C",
-            "tooltip": f"⚠️ Offline Mode\n\n{fallback_forecast}",
-            "class": "weather-offline"
-        }
-        print(json.dumps(cache_payload, ensure_ascii=False))
-    except Exception:
-        print(json.dumps({"text": "\uf185 --\u00b0C", "tooltip": "Offline"}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
