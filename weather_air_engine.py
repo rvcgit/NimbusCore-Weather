@@ -269,6 +269,7 @@ def main():
         atomic_write("air_aqi_cache", str(us_aqi))
         atomic_write("weather_forecast_cache", extended_forecast_summary)
         atomic_write("weather_temp_cache", f"{temp:.1f}")
+        atomic_write("weather_apparent_temp_cache", f"{apparent_temp:.1f}")
         atomic_write("weather_icon_cache", icon)
         atomic_write("weather_moon_phase_cache", m_phase)
         atomic_write("weather_wmo_code", str(w_code))
