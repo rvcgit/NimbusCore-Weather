@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # ---------------------------------------------------------------------------
-# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 1 OF 3
-# System initialization, global maps, and network geolocation routing.
+# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 1 OF 6
 # ---------------------------------------------------------------------------
 
 import json
@@ -23,6 +23,7 @@ MANUAL_LON = None  # Edit with Specific Coordinate [ Longitude ]
 # Keep weather and air quality display synced to Indian Standard Time.
 TIMEZONE = "Asia/Kolkata"
 # ==============================================================
+# END OF PART !
 
 # ==================== CROSS-PLATFORM LOCATION DETECTION ====================
 
@@ -70,21 +71,22 @@ else:
     CACHE_DIR = Path("/tmp")
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# END OF PART 2
 
 # ==================== NERD FONT GLYPH DICTIONARIES ====================
 
 ICONS = {
-    "sun": "\uf185",           #  Bright Day Sun
-    "moon": "\uf186",          #  Dusk Time Moon
-    "partly_day": "\ue21d",    #  Clouds with Sun
-    "partly_night": "\ue37e",  #  Clouds with Moon
-    "cloud": "\ue312",         #  Dense Clouds
-    "fog": "\ue30d",           #  Fog/Mist
-    "drizzle": "\ue239",       #  Light Drizzle
-    "rain": "\ue239",          #  Heavy Rain
-    "snow": "\uf2dc",          #  Snow Fallback
-    "storm": "\ue322",         #  Thunderstorm
-    "wind": "\uf11e",          #  Wind Decorative Icon
+    "sun": "\uf185",           # Bright Day Sun
+    "moon": "\uf186",          # Dusk Time Moon
+    "partly_day": "\ue21d",    # Clouds with Sun
+    "partly_night": "\ue37e",  # Clouds with Moon
+    "cloud": "\ue312",         # Dense Clouds
+    "fog": "\ue30d",           # Fog/Mist
+    "drizzle": "\ue239",       # Light Drizzle
+    "rain": "\ue239",          # Heavy Rain
+    "snow": "\uf2dc",          # Snow Fallback
+    "storm": "\ue322",         # Thunderstorm
+    "wind": "\uf11e",          # Wind Decorative Icon
 }
 
 WMO_TEXT_MAP = {
@@ -98,10 +100,6 @@ WMO_TEXT_MAP = {
     85: "Slight Snow Showers", 86: "Heavy Snow Showers",
     95: "Thunderstorm", 96: "Thunderstorm with Slight Hail", 99: "Severe Thunderstorm"
 }
-# ---------------------------------------------------------------------------
-# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 2 OF 3
-# Mathematical algorithmic data handlers and parallel endpoints network core.
-# ---------------------------------------------------------------------------
 
 def weather_icon(code, is_day):
     """Maps WMO codes directly to Nerd Font glyph positions based on day/night states."""
@@ -155,6 +153,76 @@ def atomic_write(filename, content):
             try: os.unlink(temp_name)
             except OSError: pass
 
+# END OFPART 3
+
+def _serve_cache_fallback():
+    """Reads the last valid data from the cache files when API endpoints are unreachable."""
+    try:
+        temp = "N/A"
+        cond_text = "Unknown Sky"
+        icon = ICONS["cloud"]
+        us_aqi = "0"
+        aqi_desc = "Unknown"
+        wind_custom_string = "N/A"
+        m_phase = "N/A"
+        tooltip_data = "No extended forecast available."
+
+        if (CACHE_DIR / "weather_temp_cache").exists():
+            with open(CACHE_DIR / "weather_temp_cache", "r", encoding="utf-8") as f: temp = f.read().strip()
+        if (CACHE_DIR / "weather_icon_cache").exists():
+            with open(CACHE_DIR / "weather_icon_cache", "r", encoding="utf-8") as f: icon = f.read().strip()
+        if (CACHE_DIR / "weather_condition_cache").exists():
+            with open(CACHE_DIR / "weather_condition_cache", "r", encoding="utf-8") as f: cond_text = f.read().strip().replace(icon, "").strip()
+        if (CACHE_DIR / "air_aqi_cache").exists():
+            with open(CACHE_DIR / "air_aqi_cache", "r", encoding="utf-8") as f: us_aqi = f.read().strip()
+        if (CACHE_DIR / "wind_stats").exists():
+            with open(CACHE_DIR / "wind_stats", "r", encoding="utf-8") as f: wind_custom_string = f.read().strip()
+        if (CACHE_DIR / "weather_moon_phase_cache").exists():
+            with open(CACHE_DIR / "weather_moon_phase_cache", "r", encoding="utf-8") as f: m_phase = f.read().strip()
+        if (CACHE_DIR / "weather_forecast_cache").exists():
+            with open(CACHE_DIR / "weather_forecast_cache", "r", encoding="utf-8") as f: tooltip_data = f.read().strip()
+
+        try:
+            aqi_val = int(us_aqi)
+            if aqi_val <= 50: aqi_desc = "Good (Green)"
+            elif aqi_val <= 100: aqi_desc = "Moderate (Yellow)"
+            elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups (Orange)"
+            elif aqi_val <= 200: aqi_desc = "Unhealthy (Red)"
+            elif aqi_val <= 300: aqi_desc = "Very Unhealthy (Purple)"
+            else: aqi_desc = "Hazardous (Brown)"
+        except Exception:
+            pass
+
+        if os.isatty(1):
+            print("\n================== CLIMATE CACHE FALLBACK ==================")
+            print(f"Condition  : {icon}  {cond_text}")
+            print(f"Temperature: {temp}\u00b0C")
+            print(f"Wind State : {wind_custom_string}")
+            print(f"Air Index  : AQI {us_aqi} ({aqi_desc})")
+            print(f"Lunar Cycle: {m_phase}")
+            print("===========================================================")
+
+        try:
+            display_temp = float(temp)
+            text_temp = f"{display_temp:.0f}\u00b0C"
+        except Exception:
+            text_temp = f"{temp}\u00b0C"
+
+        waybar_payload = {
+            "text": f"{icon} {text_temp}",
+            "alt": cond_text,
+            "tooltip": f"AQI: {us_aqi} ({aqi_desc})\nWind: {wind_custom_string}\nMoon: {m_phase}\n\n{tooltip_data}",
+            "class": "weather",
+            "percentage": int(us_aqi) if us_aqi.isdigit() else 0
+        }
+        print(json.dumps(waybar_payload, ensure_ascii=False))
+
+    except Exception as fallback_error:
+        emergency_payload = {"text": "   --\u00b0C", "alt": "Offline", "tooltip": f"Engine Error: {fallback_error}", "class": "weather", "percentage": 0}
+        print(json.dumps(emergency_payload, ensure_ascii=False))
+
+# END OF PART 4
+
 # ==================== CORE DATA INGESTION ENGINE ====================
 
 def main():
@@ -203,10 +271,8 @@ def main():
         print("[ERROR] Failed to fetch data from API endpoints.")
         _serve_cache_fallback()
         return
-# ---------------------------------------------------------------------------
-# NIMBUSCORE UNIFIED WEATHER & AIR QUALITY ENGINE (v2.8) - PART 3 OF 3
-# Extraction logic mapping out all 10 cache tokens and generating CSV tables.
-# ---------------------------------------------------------------------------
+
+# END OF PART 5
 
     # EXTRACT CORE RUNTIME DATA PAYLOAD VALUES
     current = weather_data.get("current", {})
@@ -217,7 +283,6 @@ def main():
     is_day = current.get("is_day", 1)
     w_code = current.get("weather_code", 0)
 
-    # FIXED: Safely extract only the current hour's integer out of the raw forecast list layout
     hourly_aqi = aqi_data.get("hourly", {})
     us_aqi_list = hourly_aqi.get("us_aqi", [0])
     
@@ -281,7 +346,6 @@ def main():
         # 2. Combines them instantly into your exact custom layout format: "WINDSPEED(m/s) ARROW (TEXT)"
         wind_custom_string = f"{wind_speed:.1f} m/s {compass_arr} ({compass_pt})"
         atomic_write("wind_stats", wind_custom_string)
-        # -----------------------------------------------------------
 
         atomic_write("weather_wind_speed_cache", f"{wind_speed:.1f}")
 
@@ -314,12 +378,12 @@ def main():
     # Process Terminal Standard Output Logging Layout
     try:
         aqi_val = int(us_aqi)
-        if aqi_val <= 50: aqi_desc = "Good 🟢"
-        elif aqi_val <= 100: aqi_desc = "Moderate 🟡"
-        elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups 🟠"
-        elif aqi_val <= 200: aqi_desc = "Unhealthy 🔴"
-        elif aqi_val <= 300: aqi_desc = "Very Unhealthy 🟣"
-        else: aqi_desc = "Hazardous 🟤"
+        if aqi_val <= 50: aqi_desc = "Good"
+        elif aqi_val <= 100: aqi_desc = "Moderate"
+        elif aqi_val <= 150: aqi_desc = "Unhealthy for Sensitive Groups"
+        elif aqi_val <= 200: aqi_desc = "Unhealthy"
+        elif aqi_val <= 300: aqi_desc = "Very Unhealthy"
+        else: aqi_desc = "Hazardous"
     except Exception:
         aqi_desc = "Unknown"
 
@@ -334,7 +398,7 @@ def main():
 
     # Pull whichever cache dashboard is available on disk
     tooltip_data = ""
-    for c_file in ["weather_desktop_dashboard", "weather_forecast_cache"]:
+    for c_file in ["weather_forecast_cache"]:
         try:
             with open(CACHE_DIR / c_file, "r", encoding="utf-8") as f:
                 tooltip_data = f.read().strip()
