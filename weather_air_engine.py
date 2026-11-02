@@ -153,7 +153,7 @@ def atomic_write(filename, content):
             try: os.unlink(temp_name)
             except OSError: pass
 
-# END OFPART 3
+# END OF PART 3
 
 def _serve_cache_fallback():
     """Reads the last valid data from the cache files when API endpoints are unreachable."""
@@ -417,3 +417,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# END OF PART 6 & THE SCRIPT
