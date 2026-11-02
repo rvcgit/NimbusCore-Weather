@@ -23,7 +23,7 @@ MANUAL_LON = None  # Edit with Specific Coordinate [ Longitude ]
 # Keep weather and air quality display synced to Indian Standard Time.
 TIMEZONE = "Asia/Kolkata"
 # ==============================================================
-# END OF PART !
+# END OF PART 1
 
 # ==================== CROSS-PLATFORM LOCATION DETECTION ====================
 
