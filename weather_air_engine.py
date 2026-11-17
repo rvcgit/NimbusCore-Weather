@@ -76,12 +76,12 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # ==================== NERD FONT GLYPH DICTIONARIES ====================
 
 ICONS = {
-    "sun": "\uf185",           # Bright Day Sun
-    "moon": "\uf186",          # Dusk Time Moon
+    "sun": "\ue30d",           # Bright Day Sun
+    "moon": "\ue32b",          # Dusk Time Moon
     "partly_day": "\ue21d",    # Clouds with Sun
     "partly_night": "\ue37e",  # Clouds with Moon
     "cloud": "\ue312",         # Dense Clouds
-    "fog": "\ue30d",           # Fog/Mist
+    "fog": "\ue313",           # Fog/Mist
     "drizzle": "\ue239",       # Light Drizzle
     "rain": "\ue239",          # Heavy Rain
     "snow": "\uf2dc",          # Snow Fallback
